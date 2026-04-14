@@ -3,27 +3,51 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/ui/Button";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { Icon } from "@/components/ui/Icon";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { api } from "@/lib/api-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useParams, useRouter } from "next/navigation";
 
+type Question = {
+  id?: string;
+  label: string;
+  type: "text" | "textarea" | "select";
+  options?: string[] | null;
+  required?: boolean;
+  position?: number;
+};
+
 export default function EditEventTypePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ["event-type", params.id], queryFn: () => api.getEventType(params.id) });
+  const { data: schedules } = useQuery({ queryKey: ["schedules"], queryFn: api.listSchedules });
+  const { data: initialQuestions } = useQuery({ queryKey: ["questions", params.id], queryFn: () => api.listQuestions(params.id) });
 
   const [form, setForm] = useState<any>(null);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   useEffect(() => { if (data && !form) setForm(data); }, [data, form]);
+  useEffect(() => { if (initialQuestions) setQuestions(initialQuestions as Question[]); }, [initialQuestions]);
 
   const save = useMutation({
-    mutationFn: () => api.updateEventType(params.id, {
-      name: form.name, slug: form.slug, durationMinutes: form.durationMinutes,
-      description: form.description, color: form.color, active: form.active,
-    }),
-    onSuccess: () => { toast.success("Saved"); qc.invalidateQueries({ queryKey: ["event-types"] }); },
+    mutationFn: async () => {
+      await api.updateEventType(params.id, {
+        name: form.name, slug: form.slug, durationMinutes: form.durationMinutes,
+        description: form.description, color: form.color, active: form.active,
+        bufferBeforeMinutes: form.bufferBeforeMinutes, bufferAfterMinutes: form.bufferAfterMinutes,
+        scheduleId: form.scheduleId ?? null,
+      });
+      await api.saveQuestions(params.id, { questions });
+    },
+    onSuccess: () => {
+      toast.success("Saved");
+      qc.invalidateQueries({ queryKey: ["event-types"] });
+      qc.invalidateQueries({ queryKey: ["questions", params.id] });
+    },
     onError: (err: any) => toast.error(err?.body?.error?.message || "Save failed"),
   });
 
@@ -60,6 +84,19 @@ export default function EditEventTypePage() {
                 ))}
               </div>
             </div>
+            <div>
+              <Label>Availability schedule</Label>
+              <select
+                value={form.scheduleId ?? ""}
+                onChange={(e) => setForm({ ...form, scheduleId: e.target.value || null })}
+                className="w-full h-10 px-3 rounded bg-surface-container-lowest ghost-border focus-ring text-sm"
+              >
+                <option value="">(Use default)</option>
+                {schedules?.map((s: any) => (
+                  <option key={s.id} value={s.id}>{s.name}{s.isDefault ? " — default" : ""}</option>
+                ))}
+              </select>
+            </div>
             <div><Label>Description</Label><Textarea value={form.description || ""} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
             <div>
               <Label>Color</Label>
@@ -80,7 +117,7 @@ export default function EditEventTypePage() {
             </div>
           </div>
           <div className="mt-8 pt-6 flex justify-between items-center">
-            <Button variant="ghost" className="text-error" onClick={() => { if (confirm("Delete this event type?")) del.mutate(); }}>
+            <Button variant="ghost" className="text-error" onClick={() => setConfirmDelete(true)}>
               <Icon name="delete" /> Delete
             </Button>
             <div className="flex gap-2">
@@ -90,24 +127,90 @@ export default function EditEventTypePage() {
           </div>
         </div>
 
-        <div className="bg-surface-container-lowest rounded-xl p-8 shadow-elev-1">
-          <p className="text-xs font-bold text-outline uppercase tracking-widest mb-4">Preview</p>
-          <div className="flex flex-col gap-4">
-            <div className="w-16 h-16 rounded-full bg-primary-fixed-dim flex items-center justify-center text-primary font-bold text-xl">F</div>
-            <div>
-              <h3 className="text-on-surface-variant text-sm">Fhd</h3>
-              <h1 className="text-on-surface text-xl font-bold tracking-tight mt-1">{form.name}</h1>
+        {/* Right column: Preview + Custom questions editor */}
+        <div className="flex flex-col gap-6">
+          <div className="bg-surface-container-lowest rounded-xl p-8 shadow-elev-1">
+            <p className="text-xs font-bold text-outline uppercase tracking-widest mb-4">Preview</p>
+            <div className="flex flex-col gap-4">
+              <div className="w-16 h-16 rounded-full bg-primary-fixed-dim flex items-center justify-center text-primary font-bold text-xl">F</div>
+              <div>
+                <h3 className="text-on-surface-variant text-sm">Fhd</h3>
+                <h1 className="text-on-surface text-xl font-bold tracking-tight mt-1">{form.name}</h1>
+              </div>
+              <div className="flex items-center gap-3 text-on-surface-variant">
+                <Icon name="schedule" className="text-xl" /><span className="text-sm font-medium">{form.durationMinutes} min</span>
+              </div>
+              {form.description && <p className="text-on-surface-variant text-sm leading-relaxed">{form.description}</p>}
             </div>
-            <div className="flex items-center gap-3 text-on-surface-variant">
-              <Icon name="schedule" className="text-xl" /><span className="text-sm font-medium">{form.durationMinutes} min</span>
+          </div>
+
+          <div className="bg-surface-container-lowest rounded-xl p-8 shadow-elev-1">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold">Custom invitee questions</h3>
+                <p className="text-sm text-on-surface-variant">Ask for extra information on the booking form.</p>
+              </div>
+              <Button variant="ghost" onClick={() => setQuestions([...questions, { label: "New question", type: "text", required: false }])}>
+                <Icon name="add" /> Add
+              </Button>
             </div>
-            <div className="flex items-center gap-3 text-on-surface-variant">
-              <Icon name="videocam" className="text-xl" /><span className="text-sm font-medium">Web conferencing details provided upon confirmation.</span>
-            </div>
-            {form.description && <p className="text-on-surface-variant text-sm leading-relaxed">{form.description}</p>}
+            {questions.length === 0 ? (
+              <p className="text-sm text-outline">No questions yet. Invitees will only be asked for name & email.</p>
+            ) : (
+              <div className="space-y-3">
+                {questions.map((q, i) => (
+                  <div key={i} className="p-4 rounded-lg bg-surface-container-low space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Input value={q.label} onChange={(e) => {
+                        const n = [...questions]; n[i] = { ...n[i], label: e.target.value }; setQuestions(n);
+                      }} />
+                      <button onClick={() => { const n = [...questions]; n.splice(i, 1); setQuestions(n); }}
+                        className="text-outline hover:text-error p-2"><Icon name="delete" /></button>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <select
+                        value={q.type}
+                        onChange={(e) => { const n = [...questions]; n[i] = { ...n[i], type: e.target.value as Question["type"] }; setQuestions(n); }}
+                        className="h-9 px-3 text-sm rounded bg-surface-container-lowest ghost-border focus-ring"
+                      >
+                        <option value="text">Short text</option>
+                        <option value="textarea">Long text</option>
+                        <option value="select">Dropdown</option>
+                      </select>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={!!q.required}
+                          onChange={(e) => { const n = [...questions]; n[i] = { ...n[i], required: e.target.checked }; setQuestions(n); }} />
+                        Required
+                      </label>
+                    </div>
+                    {q.type === "select" && (
+                      <Input
+                        placeholder="Comma-separated options (e.g. Engineering, Design, PM)"
+                        value={(q.options || []).join(", ")}
+                        onChange={(e) => {
+                          const opts = e.target.value.split(",").map((s) => s.trim()).filter(Boolean);
+                          const n = [...questions]; n[i] = { ...n[i], options: opts }; setQuestions(n);
+                        }}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={() => del.mutate()}
+        title="Delete this event type?"
+        message="It will stop accepting new bookings. Existing bookings are preserved."
+        confirmLabel="Delete"
+        destructive
+        loading={del.isPending}
+      />
     </AdminShell>
   );
 }

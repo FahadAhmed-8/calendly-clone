@@ -22,10 +22,9 @@ export function zonedDateTime(dateISO: string, timeHHmm: string, tz: string): Da
 
 /** Get weekday (0..6, Sun=0) for a Date in a timezone. */
 export function zonedWeekday(date: Date, tz: string): number {
-  const formatted = formatInTimeZone(date, tz, "e"); // 1=Mon..7=Sun (ISO week, date-fns-tz)
-  // Convert ISO (1..7) where 1=Mon to Sun=0..Sat=6
-  const iso = Number(formatted);
-  return iso === 7 ? 0 : iso;
+  // "i" = ISO day-of-week: 1=Mon..7=Sun (locale-independent).
+  const iso = Number(formatInTimeZone(date, tz, "i"));
+  return iso === 7 ? 0 : iso; // Sun(7)->0, Mon(1)->1, ..., Sat(6)->6
 }
 
 /** Common IANA timezones (short list for the select UI). */

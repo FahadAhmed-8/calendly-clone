@@ -44,7 +44,7 @@ export default function CancelBookingPage() {
   if (isLoading) return <Shell><p className="text-on-surface-variant">Loading...</p></Shell>;
   if (error || !booking) return <Shell><p className="text-error">Booking not found.</p></Shell>;
 
-  const tz = booking.inviteeTimezone || "UTC";
+  const tz = booking.invitee?.timezone || "UTC";
   const start = new Date(booking.startUtc);
   const end = new Date(booking.endUtc);
 

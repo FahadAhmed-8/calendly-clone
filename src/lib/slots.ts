@@ -15,11 +15,13 @@ export async function computeSlots(params: {
   const eventType = await prisma.eventType.findUnique({
     where: { id: params.eventTypeId },
     include: {
+      schedule: { include: { rules: true, overrides: true } },
       host: { include: { availabilitySchedules: { where: { isDefault: true }, include: { rules: true, overrides: true } } } },
     },
   });
   if (!eventType || eventType.deletedAt || !eventType.active) return [];
-  const schedule = eventType.host.availabilitySchedules[0];
+  // Prefer the event type's linked schedule; fall back to the host's default schedule.
+  const schedule = eventType.schedule ?? eventType.host.availabilitySchedules[0];
   if (!schedule) return [];
   const hostTz = schedule.timezone;
   const duration = eventType.durationMinutes;
@@ -42,7 +44,8 @@ export async function computeSlots(params: {
       blocks = (override.blocks as AvailabilityBlock[]) || [];
     } else {
       // Weekday in host timezone for this host-local date.
-      const weekdayIso = Number(formatInTimeZone(fromZonedTime(`${hostDate}T12:00:00`, hostTz), hostTz, "e"));
+      // "i" = ISO day-of-week (1=Mon..7=Sun); map Sun(7)->0 so Sun=0..Sat=6.
+      const weekdayIso = Number(formatInTimeZone(fromZonedTime(`${hostDate}T12:00:00`, hostTz), hostTz, "i"));
       const weekday = weekdayIso === 7 ? 0 : weekdayIso;
       blocks = schedule.rules
         .filter((r) => r.weekday === weekday)

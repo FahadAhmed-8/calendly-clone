@@ -2,6 +2,7 @@
 import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { api } from "@/lib/api-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -13,11 +14,12 @@ type Tab = "upcoming" | "past" | "cancelled";
 
 export default function MeetingsPage() {
   const [tab, setTab] = useState<Tab>("upcoming");
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   const qc = useQueryClient();
   const { data: meetings, isLoading } = useQuery({ queryKey: ["meetings", tab], queryFn: () => api.listBookings(tab) });
   const cancel = useMutation({
     mutationFn: (id: string) => api.cancelBookingAdmin(id),
-    onSuccess: () => { toast.success("Meeting cancelled"); qc.invalidateQueries({ queryKey: ["meetings"] }); },
+    onSuccess: () => { toast.success("Meeting cancelled"); setConfirmId(null); qc.invalidateQueries({ queryKey: ["meetings"] }); },
     onError: (err: any) => toast.error(err?.body?.error?.message || "Failed"),
   });
 
@@ -71,7 +73,7 @@ export default function MeetingsPage() {
                     {m.status === "cancelled" && <span className="text-[10px] font-bold uppercase tracking-wider bg-error-container text-on-error-container px-2 py-1 rounded-full">Cancelled</span>}
                     {tab === "upcoming" && (
                       <div className="opacity-0 group-hover:opacity-100 transition flex gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => { if (confirm("Cancel this meeting?")) cancel.mutate(m.id); }}>Cancel</Button>
+                        <Button variant="ghost" size="sm" onClick={() => setConfirmId(m.id)}>Cancel</Button>
                       </div>
                     )}
                   </div>
@@ -81,6 +83,18 @@ export default function MeetingsPage() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmId}
+        onClose={() => setConfirmId(null)}
+        onConfirm={() => confirmId && cancel.mutate(confirmId)}
+        title="Cancel this meeting?"
+        message="The invitee will be notified and the slot will be freed."
+        confirmLabel="Cancel meeting"
+        cancelLabel="Keep it"
+        destructive
+        loading={cancel.isPending}
+      />
     </AdminShell>
   );
 }

@@ -3,7 +3,6 @@ import { ZodError } from "zod";
 
 export type ErrorCode =
   | "VALIDATION_ERROR"
-  | "UNAUTHORIZED"
   | "FORBIDDEN"
   | "NOT_FOUND"
   | "SLUG_TAKEN"
@@ -12,6 +11,8 @@ export type ErrorCode =
   | "ALREADY_CANCELLED"
   | "OUTSIDE_AVAILABILITY"
   | "OVERLAPPING_RULES"
+  | "INVALID_TOKEN"
+  | "LAST_SCHEDULE"
   | "INTERNAL_ERROR";
 
 export class AppError extends Error {

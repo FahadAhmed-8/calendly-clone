@@ -3,6 +3,7 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Input, Label, Textarea, FieldError } from "@/components/ui/Input";
 import { api } from "@/lib/api-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -15,10 +16,11 @@ export default function EventTypesPage() {
   const { data: eventTypes, isLoading } = useQuery({ queryKey: ["event-types"], queryFn: api.listEventTypes });
   const [createOpen, setCreateOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [toDelete, setToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const del = useMutation({
     mutationFn: (id: string) => api.deleteEventType(id),
-    onSuccess: () => { toast.success("Event type deleted"); qc.invalidateQueries({ queryKey: ["event-types"] }); },
+    onSuccess: () => { toast.success("Event type deleted"); setToDelete(null); qc.invalidateQueries({ queryKey: ["event-types"] }); },
     onError: (err: any) => toast.error(err?.body?.error?.message || "Delete failed"),
   });
 
@@ -58,7 +60,7 @@ export default function EventTypesPage() {
                           <Icon name="edit" className="text-lg" /> Edit
                         </Link>
                         <button
-                          onClick={() => { setOpenMenuId(null); if (confirm(`Delete ${e.name}?`)) del.mutate(e.id); }}
+                          onClick={() => { setOpenMenuId(null); setToDelete({ id: e.id, name: e.name }); }}
                           className="w-full text-left px-4 py-2 text-sm text-error hover:bg-error-container/20 flex items-center gap-3"
                         >
                           <Icon name="delete" className="text-lg" /> Delete
@@ -93,6 +95,17 @@ export default function EventTypesPage() {
       )}
 
       <CreateEventTypeModal open={createOpen} onClose={() => setCreateOpen(false)} />
+
+      <ConfirmDialog
+        open={!!toDelete}
+        onClose={() => setToDelete(null)}
+        onConfirm={() => toDelete && del.mutate(toDelete.id)}
+        title={`Delete "${toDelete?.name ?? ""}"?`}
+        message="This event type will stop accepting bookings. Existing bookings are preserved."
+        confirmLabel="Delete"
+        destructive
+        loading={del.isPending}
+      />
     </AdminShell>
   );
 }

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { AppError, errorResponse } from "@/lib/errors";
 import { cancelBookingSchema } from "@/lib/schemas";
 import { hashToken } from "@/lib/auth";
+import { sendCancellationNotice } from "@/lib/email";
 import { timingSafeEqual } from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const updated = await prisma.booking.update({
       where: { id: b.id },
       data: { status: "cancelled", cancelledAt: new Date(), cancelReason: body.reason || null },
+      include: { eventType: true, host: true },
     });
+    sendCancellationNotice({ booking: updated as any, reason: body.reason, cancelledBy: "invitee" }).catch(() => {});
     return NextResponse.json({ id: updated.id, status: updated.status, cancelledAt: updated.cancelledAt });
   } catch (e) { return errorResponse(e); }
 }

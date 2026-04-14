@@ -4,6 +4,7 @@ import { AppError, errorResponse } from "@/lib/errors";
 import { createBookingSchema } from "@/lib/schemas";
 import { computeSlots } from "@/lib/slots";
 import { hashToken, randomToken } from "@/lib/auth";
+import { sendBookingConfirmation } from "@/lib/email";
 import { formatInTimeZone } from "date-fns-tz";
 
 export const dynamic = "force-dynamic";
@@ -11,11 +12,33 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   try {
     const body = createBookingSchema.parse(await req.json());
-    const eventType = await prisma.eventType.findUnique({ where: { id: body.eventTypeId } });
+    const eventType = await prisma.eventType.findUnique({
+      where: { id: body.eventTypeId },
+      include: { customQuestions: true },
+    });
     if (!eventType || eventType.deletedAt || !eventType.active) throw new AppError("NOT_FOUND", 404, "Event type not found");
 
     const start = new Date(body.startUtc);
     const end = new Date(start.getTime() + eventType.durationMinutes * 60 * 1000);
+
+    // Reject times in the past.
+    if (start.getTime() <= Date.now()) throw new AppError("OUTSIDE_AVAILABILITY", 422, "That time is in the past");
+
+    // Answers must target questions that belong to this event type.
+    const validQuestionIds = new Set(eventType.customQuestions.map((q) => q.id));
+    for (const a of body.answers) {
+      if (!validQuestionIds.has(a.questionId)) {
+        throw new AppError("VALIDATION_ERROR", 400, "Unknown question for this event type");
+      }
+    }
+    // Required questions must be answered.
+    for (const q of eventType.customQuestions) {
+      if (!q.required) continue;
+      const match = body.answers.find((a) => a.questionId === q.id);
+      if (!match || !match.answer.trim()) {
+        throw new AppError("VALIDATION_ERROR", 400, `Missing answer for "${q.label}"`);
+      }
+    }
 
     // Re-verify the slot is valid in the booking's day (invitee timezone).
     const inviteeDate = formatInTimeZone(start, body.inviteeTimezone, "yyyy-MM-dd");
@@ -50,9 +73,12 @@ export async function POST(req: Request) {
           notes: body.notes || null,
           answers: { create: body.answers.map((a) => ({ questionId: a.questionId, answer: a.answer })) },
         },
-        include: { eventType: true },
+        include: { eventType: true, host: true },
       });
     });
+
+    // Fire-and-forget confirmation email; never block the response.
+    sendBookingConfirmation({ booking: created as any, cancellationToken: rawToken }).catch(() => {});
 
     return NextResponse.json({
       id: created.id,

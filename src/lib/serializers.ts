@@ -10,6 +10,7 @@ export function eventTypeToPublic(e: any, username: string) {
     active: e.active,
     bufferBeforeMinutes: e.bufferBeforeMinutes,
     bufferAfterMinutes: e.bufferAfterMinutes,
+    scheduleId: e.scheduleId ?? null,
     bookingUrl: `${base}/${username}/${e.slug}`,
     createdAt: e.createdAt,
     updatedAt: e.updatedAt,

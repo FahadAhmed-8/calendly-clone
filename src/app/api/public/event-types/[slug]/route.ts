@@ -10,7 +10,10 @@ export async function GET(req: Request, { params }: { params: { slug: string } }
     const username = url.searchParams.get("username") || DEFAULT_HOST_USERNAME;
     const host = await prisma.user.findUnique({ where: { username } });
     if (!host) throw new AppError("NOT_FOUND", 404, "Host not found");
-    const e = await prisma.eventType.findFirst({ where: { hostId: host.id, slug: params.slug, deletedAt: null } });
+    const e = await prisma.eventType.findFirst({
+      where: { hostId: host.id, slug: params.slug, deletedAt: null },
+      include: { customQuestions: { orderBy: { position: "asc" } } },
+    });
     if (!e) throw new AppError("NOT_FOUND", 404, "Event type not found");
     if (!e.active) throw new AppError("NOT_FOUND", 410, "This event type is not available");
     return NextResponse.json({
@@ -20,6 +23,7 @@ export async function GET(req: Request, { params }: { params: { slug: string } }
       durationMinutes: e.durationMinutes,
       description: e.description,
       color: e.color,
+      questions: e.customQuestions.map((q) => ({ id: q.id, label: q.label, type: q.type, options: q.options, required: q.required })),
       host: { displayName: host.displayName, username: host.username, avatarUrl: host.avatarUrl, timezone: host.timezone },
     });
   } catch (e) { return errorResponse(e); }

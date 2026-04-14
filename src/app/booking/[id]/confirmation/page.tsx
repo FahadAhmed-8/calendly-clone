@@ -31,10 +31,10 @@ export default function ConfirmationPage() {
   if (isLoading) return <Shell><p className="text-on-surface-variant">Loading...</p></Shell>;
   if (error || !booking) return <Shell><p className="text-error">Booking not found.</p></Shell>;
 
-  const tz = booking.inviteeTimezone || "UTC";
+  const tz = booking.invitee?.timezone || "UTC";
   const start = new Date(booking.startUtc);
   const end = new Date(booking.endUtc);
-  const hostName = booking.eventType?.host?.displayName || "Host";
+  const hostName = booking.host?.displayName || "Host";
 
   const gcalUrl = buildGoogleCal(booking, start, end, hostName);
   const outlookUrl = buildOutlook(booking, start, end, hostName);
@@ -73,11 +73,41 @@ export default function ConfirmationPage() {
           </div>
         </div>
 
-        {token && booking.status !== "cancelled" && (
-          <Link href={`/booking/${booking.id}/cancel?token=${encodeURIComponent(token)}`} className="text-sm text-on-surface-variant hover:text-error font-medium">
-            Need to cancel? <span className="underline">Cancel this meeting</span>
-          </Link>
+        {booking.answers && booking.answers.length > 0 && (
+          <div className="w-full text-left">
+            <p className="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-3">Your responses</p>
+            <div className="space-y-2">
+              {booking.answers.map((a: any, i: number) => (
+                <div key={i} className="text-sm">
+                  <span className="font-semibold text-on-surface">{a.label}: </span>
+                  <span className="text-on-surface-variant">{a.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
+
+        {token && booking.status !== "cancelled" && (
+          <div className="flex flex-col sm:flex-row gap-3 text-sm">
+            <Link href={`/booking/${booking.id}/reschedule?token=${encodeURIComponent(token)}`} className="text-on-surface-variant hover:text-primary font-medium">
+              Need a different time? <span className="underline">Reschedule</span>
+            </Link>
+            <Link href={`/booking/${booking.id}/cancel?token=${encodeURIComponent(token)}`} className="text-on-surface-variant hover:text-error font-medium">
+              <span className="underline">Cancel</span>
+            </Link>
+          </div>
+        )}
+
+        <div className="w-full pt-4 border-t border-outline-variant/30 flex flex-col sm:flex-row justify-between items-center gap-3">
+          {booking.host?.username && booking.eventType?.slug && (
+            <Link href={`/${booking.host.username}/${booking.eventType.slug}/book`} className="text-sm text-on-surface-variant hover:text-primary font-medium inline-flex items-center gap-1">
+              <Icon name="arrow_back" className="text-base" /> Book another time
+            </Link>
+          )}
+          <Link href="/" className="text-sm text-on-surface-variant hover:text-primary font-medium inline-flex items-center gap-1">
+            <Icon name="home" className="text-base" /> Back to dashboard
+          </Link>
+        </div>
       </div>
     </Shell>
   );

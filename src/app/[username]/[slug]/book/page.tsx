@@ -22,6 +22,7 @@ export default function BookingFormPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [banner, setBanner] = useState<string | null>(null);
 
@@ -40,6 +41,9 @@ export default function BookingFormPage() {
         inviteeEmail: email,
         inviteeTimezone: tz,
         notes: notes || null,
+        answers: Object.entries(answers)
+          .filter(([, v]) => v && v.trim())
+          .map(([questionId, answer]) => ({ questionId, answer })),
       });
     },
     onSuccess: (data: any) => {
@@ -76,6 +80,9 @@ export default function BookingFormPage() {
     if (!name.trim()) e.name = "Name is required";
     if (!email.trim()) e.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Invalid email";
+    for (const q of (eventType?.questions || []) as any[]) {
+      if (q.required && !(answers[q.id] || "").trim()) e[`q:${q.id}`] = `${q.label} is required`;
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -142,6 +149,34 @@ export default function BookingFormPage() {
                   <Label>Anything else we should know?</Label>
                   <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Please share any pre-meeting requirements or agenda points..." rows={4} />
                 </div>
+                {(eventType?.questions as any[] | undefined)?.map((q) => (
+                  <div key={q.id}>
+                    <Label>{q.label}{q.required ? " *" : ""}</Label>
+                    {q.type === "textarea" ? (
+                      <Textarea
+                        value={answers[q.id] || ""}
+                        onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+                        rows={3}
+                      />
+                    ) : q.type === "select" ? (
+                      <select
+                        value={answers[q.id] || ""}
+                        onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+                        className="w-full h-10 px-3 rounded bg-surface-container-lowest ghost-border focus-ring text-sm"
+                      >
+                        <option value="">Select…</option>
+                        {(q.options || []).map((o: string) => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    ) : (
+                      <Input
+                        value={answers[q.id] || ""}
+                        onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+                        error={errors[`q:${q.id}`]}
+                      />
+                    )}
+                    <FieldError message={errors[`q:${q.id}`]} />
+                  </div>
+                ))}
               </div>
             </div>
             <div className="mt-12 pt-8 flex items-center justify-end gap-2">

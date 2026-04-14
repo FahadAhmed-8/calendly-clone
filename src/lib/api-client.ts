@@ -26,7 +26,25 @@ export const api = {
   cancelBookingAdmin: (id: string, reason?: string) =>
     fetch(`/api/admin/bookings/${id}/cancel`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason }) }).then((r) => json(r)),
 
+  // Schedules
+  listSchedules: () => fetch("/api/admin/schedules").then((r) => json<any[]>(r)),
+  createSchedule: (body: { name: string; timezone: string }) =>
+    fetch("/api/admin/schedules", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => json<any>(r)),
+  getSchedule: (id: string) => fetch(`/api/admin/schedules/${id}`).then((r) => json<any>(r)),
+  patchSchedule: (id: string, body: any) =>
+    fetch(`/api/admin/schedules/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => json(r)),
+  saveSchedule: (id: string, body: any) =>
+    fetch(`/api/admin/schedules/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => json(r)),
+  deleteSchedule: (id: string) => fetch(`/api/admin/schedules/${id}`, { method: "DELETE" }).then((r) => json(r).catch(() => null)),
+
+  // Questions
+  listQuestions: (eventTypeId: string) => fetch(`/api/admin/event-types/${eventTypeId}/questions`).then((r) => json<any[]>(r)),
+  saveQuestions: (eventTypeId: string, body: any) =>
+    fetch(`/api/admin/event-types/${eventTypeId}/questions`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => json<any[]>(r)),
+
   // Public
+  reschedule: (id: string, body: { token: string; startUtc: string }) =>
+    fetch(`/api/public/bookings/${id}/reschedule`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => json<any>(r)),
   publicEventType: (username: string, slug: string) =>
     fetch(`/api/public/event-types/${slug}?username=${username}`).then((r) => json<any>(r)),
   publicSlots: (slug: string, date: string, tz: string, username: string) =>

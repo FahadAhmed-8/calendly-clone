@@ -33,16 +33,19 @@ model EventType {
   active              Boolean  @default(true)
   bufferBeforeMinutes Int      @default(0)
   bufferAfterMinutes  Int      @default(0)
+  scheduleId          String?
   deletedAt           DateTime?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  host            User            @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  host            User                  @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  schedule        AvailabilitySchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
   bookings        Booking[]
   customQuestions CustomQuestion[]
 
   @@unique([hostId, slug])
   @@index([hostId])
+  @@index([scheduleId])
 }
 
 model AvailabilitySchedule {
@@ -53,9 +56,10 @@ model AvailabilitySchedule {
   isDefault Boolean  @default(true)
   createdAt DateTime @default(now())
 
-  host      User                 @relation(fields: [hostId], references: [id], onDelete: Cascade)
-  rules     AvailabilityRule[]
-  overrides DateOverride[]
+  host       User                 @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  rules      AvailabilityRule[]
+  overrides  DateOverride[]
+  eventTypes EventType[]
 
   @@index([hostId])
 }

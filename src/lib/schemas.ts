@@ -11,6 +11,7 @@ export const createEventTypeSchema = z.object({
   active: z.boolean().optional(),
   bufferBeforeMinutes: z.number().int().min(0).max(240).optional(),
   bufferAfterMinutes: z.number().int().min(0).max(240).optional(),
+  scheduleId: z.string().uuid().nullable().optional(),
 });
 
 export const updateEventTypeSchema = createEventTypeSchema.partial();
@@ -55,6 +56,41 @@ export const slotsQuerySchema = z.object({
 export const cancelBookingSchema = z.object({
   token: z.string().optional(),
   reason: z.string().max(500).optional().nullable(),
+});
+
+// --- Schedules ---
+export const createScheduleSchema = z.object({
+  name: z.string().min(1).max(80),
+  timezone: z.string().min(1),
+});
+export const patchScheduleSchema = z.object({
+  name: z.string().min(1).max(80).optional(),
+  timezone: z.string().min(1).optional(),
+  isDefault: z.literal(true).optional(),
+});
+export const saveScheduleRulesSchema = z.object({
+  timezone: z.string().min(1),
+  rules: z.array(availabilityRuleSchema),
+  overrides: z.array(dateOverrideSchema).optional().default([]),
+});
+
+// --- Custom invitee questions ---
+export const customQuestionSchema = z.object({
+  id: z.string().uuid().optional(),
+  label: z.string().min(1).max(200),
+  type: z.enum(["text", "textarea", "select"]).default("text"),
+  options: z.array(z.string()).optional().nullable(),
+  required: z.boolean().optional().default(false),
+  position: z.number().int().min(0).default(0),
+});
+export const putQuestionsSchema = z.object({
+  questions: z.array(customQuestionSchema),
+});
+
+// --- Reschedule ---
+export const rescheduleBookingSchema = z.object({
+  token: z.string().min(1),
+  startUtc: z.string().datetime(),
 });
 
 export type CreateEventTypeInput = z.infer<typeof createEventTypeSchema>;
