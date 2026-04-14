@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(uuid())
+  username    String   @unique
+  displayName String
+  email       String
+  avatarUrl   String?
+  timezone    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  eventTypes            EventType[]
+  availabilitySchedules AvailabilitySchedule[]
+  bookings              Booking[]
+}
+
+model EventType {
+  id                  String   @id @default(uuid())
+  hostId              String
+  name                String
+  slug                String
+  durationMinutes     Int
+  description         String?
+  color               String   @default("#0054cc")
+  active              Boolean  @default(true)
+  bufferBeforeMinutes Int      @default(0)
+  bufferAfterMinutes  Int      @default(0)
+  deletedAt           DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  host            User            @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  bookings        Booking[]
+  customQuestions CustomQuestion[]
+
+  @@unique([hostId, slug])
+  @@index([hostId])
+}
+
+model AvailabilitySchedule {
+  id        String   @id @default(uuid())
+  hostId    String
+  name      String   @default("Working Hours")
+  timezone  String
+  isDefault Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  host      User                 @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  rules     AvailabilityRule[]
+  overrides DateOverride[]
+
+  @@index([hostId])
+}
+
+model AvailabilityRule {
+  id         String @id @default(uuid())
+  scheduleId String
+  weekday    Int    // 0=Sun..6=Sat
+  startTime  String // "HH:mm"
+  endTime    String // "HH:mm"
+
+  schedule AvailabilitySchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@index([scheduleId, weekday])
+}
+
+model DateOverride {
+  id         String   @id @default(uuid())
+  scheduleId String
+  date       DateTime @db.Date
+  blocks     Json     // [{start:"09:00",end:"12:00"}] or [] for unavailable
+
+  schedule AvailabilitySchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, date])
+}
+
+model CustomQuestion {
+  id          String  @id @default(uuid())
+  eventTypeId String
+  label       String
+  type        String  @default("text") // text | textarea | select
+  options     Json?
+  required    Boolean @default(false)
+  position    Int     @default(0)
+
+  eventType EventType        @relation(fields: [eventTypeId], references: [id], onDelete: Cascade)
+  answers   BookingAnswer[]
+
+  @@index([eventTypeId])
+}
+
+model Booking {
+  id                      String   @id @default(uuid())
+  eventTypeId             String
+  hostId                  String
+  inviteeName             String
+  inviteeEmail            String
+  inviteeTimezone         String
+  startUtc                DateTime
+  endUtc                  DateTime
+  status                  String   @default("confirmed") // confirmed | cancelled
+  cancellationTokenHash   String
+  cancelledAt             DateTime?
+  cancelReason            String?
+  notes                   String?
+  createdAt               DateTime @default(now())
+
+  eventType EventType         @relation(fields: [eventTypeId], references: [id])
+  host      User              @relation(fields: [hostId], references: [id])
+  answers   BookingAnswer[]
+
+  @@index([hostId, startUtc])
+  @@index([eventTypeId, startUtc])
+  @@index([inviteeEmail])
+}
+
+model BookingAnswer {
+  id         String @id @default(uuid())
+  bookingId  String
+  questionId String
+  answer     String
+
+  booking  Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  question CustomQuestion @relation(fields: [questionId], references: [id])
+
+  @@index([bookingId])
+}
