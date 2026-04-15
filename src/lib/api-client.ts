@@ -6,6 +6,12 @@ async function json<T>(res: Response): Promise<T> {
     const body = await res.json().catch(() => ({}));
     throw Object.assign(new Error(body?.error?.message || res.statusText), { body });
   }
+  // 204 No Content has an empty body — calling res.json() on it throws
+  // "Unexpected end of JSON input", which used to surface as a "Delete
+  // failed" toast even when the row was successfully deleted.
+  if (res.status === 204 || res.headers.get("content-length") === "0") {
+    return undefined as T;
+  }
   return res.json();
 }
 
