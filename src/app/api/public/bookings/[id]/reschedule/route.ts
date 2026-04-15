@@ -65,8 +65,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       });
     });
 
-    // Fire-and-forget email; do not block the response if it fails.
-    sendRescheduleNotice({ booking: updated as any, oldStartUtc: b.startUtc }).catch(() => {});
+    // Fire-and-forget email; do not block the response if it fails, but
+    // log so silent SMTP outages are visible in server logs.
+    sendRescheduleNotice({ booking: updated as any, oldStartUtc: b.startUtc }).catch((err) => {
+      console.error("[email] sendRescheduleNotice failed", { bookingId: updated.id, err });
+    });
 
     return NextResponse.json({
       id: updated.id,

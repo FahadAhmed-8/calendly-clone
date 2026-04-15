@@ -92,8 +92,11 @@ export async function POST(req: Request) {
       });
     });
 
-    // Fire-and-forget confirmation email; never block the response.
-    sendBookingConfirmation({ booking: created as any, cancellationToken: rawToken }).catch(() => {});
+    // Fire-and-forget confirmation email; never block the response, but
+    // log failures so silent SMTP outages are visible in server logs.
+    sendBookingConfirmation({ booking: created as any, cancellationToken: rawToken }).catch((err) => {
+      console.error("[email] sendBookingConfirmation failed", { bookingId: created.id, err });
+    });
 
     return NextResponse.json({
       id: created.id,

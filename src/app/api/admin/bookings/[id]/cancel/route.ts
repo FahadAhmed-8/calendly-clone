@@ -18,7 +18,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       data: { status: "cancelled", cancelledAt: new Date(), cancelReason: body?.reason || null },
       include: { eventType: true, host: true },
     });
-    sendCancellationNotice({ booking: updated as any, reason: body?.reason, cancelledBy: "host" }).catch(() => {});
+    sendCancellationNotice({ booking: updated as any, reason: body?.reason, cancelledBy: "host" }).catch((err) => {
+      console.error("[email] sendCancellationNotice (host) failed", { bookingId: updated.id, err });
+    });
     return NextResponse.json(serialize(updated));
   } catch (e) { return errorResponse(e); }
 }
