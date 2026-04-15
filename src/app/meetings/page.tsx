@@ -5,7 +5,7 @@ import { Icon } from "@/components/ui/Icon";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { api } from "@/lib/api-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { formatInTimeZone } from "date-fns-tz";
 import { cn } from "@/lib/cn";
@@ -23,8 +23,15 @@ export default function MeetingsPage() {
     onError: (err: any) => toast.error(err?.body?.error?.message || "Failed"),
   });
 
-  const grouped = groupByDate(meetings || []);
-  const tz = "Asia/Kolkata";
+  // Show meetings in the admin's browser timezone. "Asia/Kolkata" was
+  // hardcoded, so meetings displayed wrong times for any admin in another tz.
+  // Default to UTC on the server render pass to avoid hydration mismatch,
+  // then switch to the browser's tz once mounted.
+  const [tz, setTz] = useState<string>("UTC");
+  useEffect(() => {
+    setTz(Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC");
+  }, []);
+  const grouped = useMemo(() => groupByDate(meetings || [], tz), [meetings, tz]);
 
   return (
     <AdminShell title="Meetings">
@@ -99,8 +106,7 @@ export default function MeetingsPage() {
   );
 }
 
-function groupByDate(items: any[]): [string, any[]][] {
-  const tz = "Asia/Kolkata";
+function groupByDate(items: any[], tz: string): [string, any[]][] {
   const groups: Record<string, any[]> = {};
   const today = formatInTimeZone(new Date(), tz, "yyyy-MM-dd");
   const tomorrow = formatInTimeZone(new Date(Date.now() + 86400000), tz, "yyyy-MM-dd");

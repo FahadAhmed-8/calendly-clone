@@ -25,7 +25,52 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       const clash = await prisma.eventType.findFirst({ where: { hostId: host.id, slug: body.slug, deletedAt: null } });
       if (clash) throw new AppError("SLUG_TAKEN", 409, "That slug is already in use.");
     }
-    const updated = await prisma.eventType.update({ where: { id: params.id }, data: body });
+
+    // Split `questions` out of the core update payload — it's not a column on
+    // EventType. When the client sends it, apply the same replace-set semantics
+    // as PUT .../questions, but inside the same transaction as the core update
+    // so we can't end up with a half-saved state on failure.
+    const { questions, ...coreUpdate } = body;
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const updatedEt = await tx.eventType.update({ where: { id: params.id }, data: coreUpdate });
+
+      if (questions) {
+        const existing = await tx.customQuestion.findMany({ where: { eventTypeId: updatedEt.id } });
+        const incomingIds = new Set(questions.map((q) => q.id).filter(Boolean) as string[]);
+        const toDelete = existing.filter((q) => !incomingIds.has(q.id));
+        for (const q of toDelete) {
+          await tx.customQuestion.delete({ where: { id: q.id } });
+        }
+        for (const [idx, q] of questions.entries()) {
+          if (q.id) {
+            await tx.customQuestion.update({
+              where: { id: q.id },
+              data: {
+                label: q.label,
+                type: q.type,
+                options: (q.options as any) ?? undefined,
+                required: q.required ?? false,
+                position: idx,
+              },
+            });
+          } else {
+            await tx.customQuestion.create({
+              data: {
+                eventTypeId: updatedEt.id,
+                label: q.label,
+                type: q.type,
+                options: (q.options as any) ?? undefined,
+                required: q.required ?? false,
+                position: idx,
+              },
+            });
+          }
+        }
+      }
+      return updatedEt;
+    });
+
     return NextResponse.json(toPublic(updated, host.username));
   } catch (e) { return errorResponse(e); }
 }
