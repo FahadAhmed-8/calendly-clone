@@ -6,6 +6,7 @@ import { computeSlots } from "@/lib/slots";
 import { hashToken, randomToken } from "@/lib/auth";
 import { sendBookingConfirmation } from "@/lib/email";
 import { formatInTimeZone } from "date-fns-tz";
+import { overlapsAnyWithBuffers } from "@/lib/overlap";
 
 export const dynamic = "force-dynamic";
 
@@ -51,15 +52,29 @@ export async function POST(req: Request) {
     const tokenHash = hashToken(rawToken);
 
     const created = await prisma.$transaction(async (tx) => {
-      const overlap = await tx.booking.findFirst({
+      // computeSlots already filters buffered slots, but that was OUTSIDE the
+      // transaction. Re-check here with the same buffer-aware rule so a
+      // concurrent insertion inside the buffer window is rejected too.
+      const bufCfg = {
+        bufferBeforeMinutes: eventType.bufferBeforeMinutes,
+        bufferAfterMinutes: eventType.bufferAfterMinutes,
+      };
+      const bufBefore = bufCfg.bufferBeforeMinutes * 60 * 1000;
+      const bufAfter = bufCfg.bufferAfterMinutes * 60 * 1000;
+      // Narrow the DB scan — anything outside [start-buf, end+buf] can't
+      // possibly collide once buffers are applied symmetrically.
+      const nearby = await tx.booking.findMany({
         where: {
           eventTypeId: eventType.id,
           status: "confirmed",
-          startUtc: { lt: end },
-          endUtc: { gt: start },
+          startUtc: { lt: new Date(end.getTime() + bufAfter + bufBefore) },
+          endUtc: { gt: new Date(start.getTime() - bufBefore - bufAfter) },
         },
+        select: { startUtc: true, endUtc: true },
       });
-      if (overlap) throw new AppError("SLOT_TAKEN", 409, "This time was just booked. Please pick another.");
+      if (overlapsAnyWithBuffers({ startUtc: start, endUtc: end }, nearby, bufCfg)) {
+        throw new AppError("SLOT_TAKEN", 409, "This time was just booked. Please pick another.");
+      }
       return tx.booking.create({
         data: {
           eventTypeId: eventType.id,
