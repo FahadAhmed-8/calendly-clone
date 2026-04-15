@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { formatInTimeZone } from "date-fns-tz";
 import { toast } from "sonner";
 import { api } from "@/lib/api-client";
+import { formatLocalDate } from "@/lib/time";
 import { MonthCalendar } from "@/components/public/MonthCalendar";
 import { SlotPicker } from "@/components/public/SlotPicker";
 import { Icon } from "@/components/ui/Icon";
@@ -40,7 +41,8 @@ export default function ReschedulePage() {
     queryKey: ["reschedule-slots", booking?.eventType?.slug, booking?.host?.username, selectedDate?.toISOString(), tz],
     queryFn: () => {
       if (!selectedDate || !booking) return Promise.resolve({ slots: [] as string[] });
-      const dateStr = selectedDate.toISOString().split("T")[0];
+      // LOCAL date — see formatLocalDate docstring for why toISOString is wrong.
+      const dateStr = formatLocalDate(selectedDate);
       return api.publicSlots(booking.eventType.slug, dateStr, tz, booking.host.username);
     },
     enabled: !!selectedDate && !!booking,

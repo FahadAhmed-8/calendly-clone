@@ -38,7 +38,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       answers: tokenValid ? b.answers.map((a) => ({ label: a.question.label, value: a.answer })) : [],
       status: b.status,
       cancelledAt: b.cancelledAt,
-      cancelReason: b.cancelReason,
+      // cancelReason is free-form invitee input — treat as PII, gate on token.
+      cancelReason: tokenValid ? b.cancelReason : null,
       createdAt: b.createdAt,
       tokenRequired: !tokenValid,
     });

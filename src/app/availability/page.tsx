@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { api } from "@/lib/api-client";
-import { COMMON_TIMEZONES } from "@/lib/time";
+import { COMMON_TIMEZONES, formatLocalDate } from "@/lib/time";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -208,7 +208,7 @@ export default function AvailabilityPage() {
                 <p className="text-sm text-on-surface-variant">Override weekly hours on specific dates (holidays, half-days, etc.).</p>
               </div>
               <Button variant="ghost" onClick={() => {
-                const today = new Date().toISOString().slice(0, 10);
+                const today = formatLocalDate(new Date());
                 setOverrides([...overrides, { date: today, blocks: [] }]);
               }}>
                 <Icon name="add" /> Add date

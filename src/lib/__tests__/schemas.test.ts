@@ -4,6 +4,9 @@ import {
   createEventTypeSchema,
   rescheduleBookingSchema,
   availabilityRuleSchema,
+  availabilityBlockSchema,
+  dateOverrideSchema,
+  updateEventTypeSchema,
   putQuestionsSchema,
 } from "../schemas";
 
@@ -86,6 +89,76 @@ describe("availabilityRuleSchema", () => {
     expect(
       availabilityRuleSchema.safeParse({ weekday: 7, startTime: "09:00", endTime: "17:00" }).success,
     ).toBe(false);
+  });
+
+  it("rejects hours > 23 or minutes > 59", () => {
+    expect(
+      availabilityRuleSchema.safeParse({ weekday: 1, startTime: "25:00", endTime: "26:00" }).success,
+    ).toBe(false);
+    expect(
+      availabilityRuleSchema.safeParse({ weekday: 1, startTime: "10:60", endTime: "11:00" }).success,
+    ).toBe(false);
+  });
+
+  it("rejects startTime >= endTime", () => {
+    expect(
+      availabilityRuleSchema.safeParse({ weekday: 1, startTime: "17:00", endTime: "09:00" }).success,
+    ).toBe(false);
+    expect(
+      availabilityRuleSchema.safeParse({ weekday: 1, startTime: "10:00", endTime: "10:00" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("availabilityBlockSchema", () => {
+  it("accepts a normal block", () => {
+    expect(availabilityBlockSchema.safeParse({ start: "09:00", end: "12:00" }).success).toBe(true);
+  });
+
+  it("rejects start >= end", () => {
+    expect(availabilityBlockSchema.safeParse({ start: "12:00", end: "09:00" }).success).toBe(false);
+    expect(availabilityBlockSchema.safeParse({ start: "09:00", end: "09:00" }).success).toBe(false);
+  });
+});
+
+describe("dateOverrideSchema", () => {
+  it("accepts an override with valid blocks", () => {
+    expect(
+      dateOverrideSchema.safeParse({
+        date: "2026-12-25",
+        blocks: [{ start: "10:00", end: "14:00" }],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("inherits block validation (rejects inverted block)", () => {
+    expect(
+      dateOverrideSchema.safeParse({
+        date: "2026-12-25",
+        blocks: [{ start: "14:00", end: "10:00" }],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts zero blocks (all-day unavailable)", () => {
+    expect(
+      dateOverrideSchema.safeParse({ date: "2026-12-25", blocks: [] }).success,
+    ).toBe(true);
+  });
+});
+
+describe("updateEventTypeSchema", () => {
+  it("accepts an optional questions array", () => {
+    const ok = updateEventTypeSchema.safeParse({
+      name: "New name",
+      questions: [{ label: "Phone?", type: "text", required: false, position: 0 }],
+    });
+    expect(ok.success).toBe(true);
+  });
+
+  it("accepts payload without questions", () => {
+    const ok = updateEventTypeSchema.safeParse({ name: "X" });
+    expect(ok.success).toBe(true);
   });
 });
 

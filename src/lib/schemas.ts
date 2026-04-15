@@ -2,6 +2,11 @@ import { z } from "zod";
 
 export const slugRegex = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 
+// Strict 24h HH:mm — rejects "25:99", "9:00", etc. The previous /^\d{2}:\d{2}$/
+// let through invalid wall-clocks that later blew up inside date-fns-tz.
+export const hhmmRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
+export const hhmmSchema = z.string().regex(hhmmRegex, "Time must be HH:mm in 24h format (00:00-23:59)");
+
 export const createEventTypeSchema = z.object({
   name: z.string().min(1).max(120),
   slug: z.string().min(1).max(80).regex(slugRegex, "Slug must be lowercase letters, numbers, and dashes."),
@@ -14,18 +19,19 @@ export const createEventTypeSchema = z.object({
   scheduleId: z.string().uuid().nullable().optional(),
 });
 
-export const updateEventTypeSchema = createEventTypeSchema.partial();
+// availability* schemas refine start<end so we don't need to duplicate the
+// check in every route handler. Empty ranges like 10:00-10:00 are also rejected.
+export const availabilityBlockSchema = z
+  .object({ start: hhmmSchema, end: hhmmSchema })
+  .refine((b) => b.start < b.end, { message: "End time must be after start time", path: ["end"] });
 
-export const availabilityBlockSchema = z.object({
-  start: z.string().regex(/^\d{2}:\d{2}$/),
-  end: z.string().regex(/^\d{2}:\d{2}$/),
-});
-
-export const availabilityRuleSchema = z.object({
-  weekday: z.number().int().min(0).max(6),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/),
-});
+export const availabilityRuleSchema = z
+  .object({
+    weekday: z.number().int().min(0).max(6),
+    startTime: hhmmSchema,
+    endTime: hhmmSchema,
+  })
+  .refine((r) => r.startTime < r.endTime, { message: "End time must be after start time", path: ["endTime"] });
 
 export const dateOverrideSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -85,6 +91,12 @@ export const customQuestionSchema = z.object({
 });
 export const putQuestionsSchema = z.object({
   questions: z.array(customQuestionSchema),
+});
+
+// PATCH /api/admin/event-types/[id] accepts core fields AND an optional
+// `questions` array so the edit page can save both in a single transaction.
+export const updateEventTypeSchema = createEventTypeSchema.partial().extend({
+  questions: z.array(customQuestionSchema).optional(),
 });
 
 // --- Reschedule ---

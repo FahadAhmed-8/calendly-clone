@@ -7,6 +7,7 @@ import { timingSafeEqual } from "crypto";
 import { computeSlots } from "@/lib/slots";
 import { formatInTimeZone } from "date-fns-tz";
 import { sendRescheduleNotice } from "@/lib/email";
+import { overlapsAnyWithBuffers } from "@/lib/overlap";
 
 export const dynamic = "force-dynamic";
 
@@ -35,18 +36,28 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       throw new AppError("OUTSIDE_AVAILABILITY", 422, "That time is not available");
     }
 
-    // Transaction: re-check overlap (ignoring this booking), then update.
+    // Transaction: re-check overlap (ignoring this booking) with the same
+    // buffer-aware rule used on create. See lib/overlap.ts.
     const updated = await prisma.$transaction(async (tx) => {
-      const overlap = await tx.booking.findFirst({
+      const bufCfg = {
+        bufferBeforeMinutes: b.eventType.bufferBeforeMinutes,
+        bufferAfterMinutes: b.eventType.bufferAfterMinutes,
+      };
+      const bufBefore = bufCfg.bufferBeforeMinutes * 60 * 1000;
+      const bufAfter = bufCfg.bufferAfterMinutes * 60 * 1000;
+      const nearby = await tx.booking.findMany({
         where: {
           id: { not: b.id },
           eventTypeId: b.eventTypeId,
           status: "confirmed",
-          startUtc: { lt: newEnd },
-          endUtc: { gt: newStart },
+          startUtc: { lt: new Date(newEnd.getTime() + bufAfter + bufBefore) },
+          endUtc: { gt: new Date(newStart.getTime() - bufBefore - bufAfter) },
         },
+        select: { startUtc: true, endUtc: true },
       });
-      if (overlap) throw new AppError("SLOT_TAKEN", 409, "This time was just booked. Please pick another.");
+      if (overlapsAnyWithBuffers({ startUtc: newStart, endUtc: newEnd }, nearby, bufCfg)) {
+        throw new AppError("SLOT_TAKEN", 409, "This time was just booked. Please pick another.");
+      }
       return tx.booking.update({
         where: { id: b.id },
         data: { startUtc: newStart, endUtc: newEnd },
@@ -54,8 +65,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       });
     });
 
-    // Fire-and-forget email; do not block the response if it fails.
-    sendRescheduleNotice({ booking: updated as any, oldStartUtc: b.startUtc }).catch(() => {});
+    // Fire-and-forget email; do not block the response if it fails, but
+    // log so silent SMTP outages are visible in server logs.
+    sendRescheduleNotice({ booking: updated as any, oldStartUtc: b.startUtc }).catch((err) => {
+      console.error("[email] sendRescheduleNotice failed", { bookingId: updated.id, err });
+    });
 
     return NextResponse.json({
       id: updated.id,

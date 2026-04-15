@@ -34,15 +34,17 @@ export default function EditEventTypePage() {
   useEffect(() => { if (initialQuestions) setQuestions(initialQuestions as Question[]); }, [initialQuestions]);
 
   const save = useMutation({
-    mutationFn: async () => {
-      await api.updateEventType(params.id, {
+    mutationFn: () =>
+      // Single PATCH — the server saves core fields AND questions in one
+      // transaction, so we can't end up with a half-saved state where the
+      // event type updated but questions didn't (or vice versa).
+      api.updateEventType(params.id, {
         name: form.name, slug: form.slug, durationMinutes: form.durationMinutes,
         description: form.description, color: form.color, active: form.active,
         bufferBeforeMinutes: form.bufferBeforeMinutes, bufferAfterMinutes: form.bufferAfterMinutes,
         scheduleId: form.scheduleId ?? null,
-      });
-      await api.saveQuestions(params.id, { questions });
-    },
+        questions,
+      }),
     onSuccess: () => {
       toast.success("Saved");
       qc.invalidateQueries({ queryKey: ["event-types"] });
@@ -69,7 +71,7 @@ export default function EditEventTypePage() {
             <div>
               <Label>URL Slug</Label>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-outline font-mono bg-surface-container-low px-3 h-10 inline-flex items-center rounded">scheduler.app/fhd/</span>
+                <SlugPrefix />
                 <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase() })} />
               </div>
             </div>
@@ -212,5 +214,15 @@ export default function EditEventTypePage() {
         loading={del.isPending}
       />
     </AdminShell>
+  );
+}
+
+function SlugPrefix() {
+  const [host, setHost] = useState<string>("");
+  useEffect(() => { setHost(window.location.host); }, []);
+  return (
+    <span className="text-xs text-outline font-mono bg-surface-container-low px-3 h-10 inline-flex items-center rounded">
+      {host || "your-site.com"}/fhd/
+    </span>
   );
 }

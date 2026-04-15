@@ -35,7 +35,9 @@ export const api = {
     fetch(`/api/admin/schedules/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => json(r)),
   saveSchedule: (id: string, body: any) =>
     fetch(`/api/admin/schedules/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => json(r)),
-  deleteSchedule: (id: string) => fetch(`/api/admin/schedules/${id}`, { method: "DELETE" }).then((r) => json(r).catch(() => null)),
+  // Propagate server errors to the caller (e.g. LAST_SCHEDULE) so the UI can
+  // surface them — previously the .catch() swallowed every failure silently.
+  deleteSchedule: (id: string) => fetch(`/api/admin/schedules/${id}`, { method: "DELETE" }).then((r) => json(r)),
 
   // Questions
   listQuestions: (eventTypeId: string) => fetch(`/api/admin/event-types/${eventTypeId}/questions`).then((r) => json<any[]>(r)),

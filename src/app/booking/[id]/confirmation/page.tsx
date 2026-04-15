@@ -100,7 +100,9 @@ export default function ConfirmationPage() {
 
         <div className="w-full pt-4 border-t border-outline-variant/30 flex flex-col sm:flex-row justify-between items-center gap-3">
           {booking.host?.username && booking.eventType?.slug && (
-            <Link href={`/${booking.host.username}/${booking.eventType.slug}/book`} className="text-sm text-on-surface-variant hover:text-primary font-medium inline-flex items-center gap-1">
+            // Link to the event-type landing (date/slot picker), NOT /book which
+            // is the final form that requires a ?slot= param.
+            <Link href={`/${booking.host.username}/${booking.eventType.slug}`} className="text-sm text-on-surface-variant hover:text-primary font-medium inline-flex items-center gap-1">
               <Icon name="arrow_back" className="text-base" /> Book another time
             </Link>
           )}
@@ -133,7 +135,8 @@ function toCalDate(d: Date) {
 
 function buildGoogleCal(b: any, start: Date, end: Date, host: string) {
   const title = encodeURIComponent(`${b.eventType?.name || "Meeting"} with ${host}`);
-  const details = encodeURIComponent(b.invitee?.notes || "");
+  // API returns notes at b.notes (top-level), not b.invitee.notes.
+  const details = encodeURIComponent(b.notes || "");
   return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${toCalDate(start)}/${toCalDate(end)}&details=${details}`;
 }
 
@@ -151,7 +154,7 @@ function buildIcsDataUrl(b: any, start: Date, end: Date, host: string) {
     `DTSTART:${toCalDate(start)}`,
     `DTEND:${toCalDate(end)}`,
     `SUMMARY:${(b.eventType?.name || "Meeting").replace(/\n/g, " ")} with ${host}`,
-    `DESCRIPTION:${(b.invitee?.notes || "").replace(/\n/g, "\\n")}`,
+    `DESCRIPTION:${(b.notes || "").replace(/\n/g, "\\n")}`,
     "END:VEVENT", "END:VCALENDAR",
   ].join("\r\n");
   return `data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}`;

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/cn";
+import { formatLocalDate } from "@/lib/time";
 
 interface MonthCalendarProps {
   value: Date | null;
@@ -54,7 +55,8 @@ export function MonthCalendar({
     }
 
     if (availableDates) {
-      const dateStr = dateOnly.toISOString().split("T")[0];
+      // availableDates is keyed on LOCAL YYYY-MM-DD, so match it the same way.
+      const dateStr = formatLocalDate(dateOnly);
       return !availableDates.has(dateStr);
     }
 

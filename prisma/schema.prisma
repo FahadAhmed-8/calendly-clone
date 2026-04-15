@@ -43,7 +43,13 @@ model EventType {
   bookings        Booking[]
   customQuestions CustomQuestion[]
 
-  @@unique([hostId, slug])
+  // NOTE: uniqueness on (hostId, slug) is enforced by a PARTIAL unique index
+  // that only applies to rows where deletedAt IS NULL (see migration
+  // 20260416_cascade_question_delete_and_partial_slug_unique). That lets a
+  // soft-deleted event type's slug be reused on a new event type, which the
+  // plain @@unique prevented. Prisma can't express partial uniques natively,
+  // so we keep just the btree @@index here and manage uniqueness via SQL.
+  @@index([hostId, slug])
   @@index([hostId])
   @@index([scheduleId])
 }
@@ -134,7 +140,10 @@ model BookingAnswer {
   answer     String
 
   booking  Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  question CustomQuestion @relation(fields: [questionId], references: [id])
+  // onDelete: Cascade matches the hard-delete behaviour in the questions
+  // PUT endpoint (the old FK was RESTRICT which meant deleting a question
+  // with historical answers would throw 500 instead of cascading).
+  question CustomQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@index([bookingId])
 }

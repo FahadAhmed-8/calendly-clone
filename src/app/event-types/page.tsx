@@ -7,7 +7,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Input, Label, Textarea, FieldError } from "@/components/ui/Input";
 import { api } from "@/lib/api-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
 
@@ -169,7 +169,7 @@ function CreateEventTypeModal({ open, onClose }: { open: boolean; onClose: () =>
         <div>
           <Label>URL Slug</Label>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-outline font-mono bg-surface-container-low px-3 h-10 inline-flex items-center rounded">scheduler.app/fhd/</span>
+            <SlugPrefix />
             <Input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase())} error={errors.slug} />
           </div>
           <FieldError message={errors.slug} />
@@ -194,5 +194,22 @@ function CreateEventTypeModal({ open, onClose }: { open: boolean; onClose: () =>
         </div>
       </div>
     </Modal>
+  );
+}
+
+/**
+ * Shows the public booking URL prefix (e.g. "yourapp.com/fhd/").
+ * Reads window.location.host on the client so the preview matches wherever the
+ * app is actually deployed, instead of the hardcoded "scheduler.app/fhd/".
+ * The username "fhd" is the default host (see src/lib/db.ts) — there's no auth
+ * per the assignment, so the slug prefix is always the single seeded host.
+ */
+function SlugPrefix() {
+  const [host, setHost] = useState<string>("");
+  useEffect(() => { setHost(window.location.host); }, []);
+  return (
+    <span className="text-xs text-outline font-mono bg-surface-container-low px-3 h-10 inline-flex items-center rounded">
+      {host || "your-site.com"}/fhd/
+    </span>
   );
 }
