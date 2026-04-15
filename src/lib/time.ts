@@ -15,6 +15,21 @@ export function parseHHmm(s: string): { h: number; m: number } {
   return { h, m };
 }
 
+/**
+ * Format a Date as "YYYY-MM-DD" using its LOCAL calendar fields.
+ *
+ * NOT the same as `d.toISOString().split("T")[0]` — that uses UTC and will
+ * return the previous day for users east of UTC when the date is local
+ * midnight. MonthCalendar gives us local-midnight dates, so always format
+ * in local time when building the YYYY-MM-DD key we send to /api/public/slots.
+ */
+export function formatLocalDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 /** Given a calendar date (ISO "YYYY-MM-DD") and a time "HH:mm" in tz, return UTC Date. */
 export function zonedDateTime(dateISO: string, timeHHmm: string, tz: string): Date {
   return fromZonedTime(`${dateISO}T${timeHHmm}:00`, tz);

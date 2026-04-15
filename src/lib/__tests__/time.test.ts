@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { zonedDateTime, zonedWeekday, parseHHmm, hhmm } from "../time";
+import { zonedDateTime, zonedWeekday, parseHHmm, hhmm, formatLocalDate } from "../time";
 
 describe("parseHHmm", () => {
   it("parses a valid HH:mm string", () => {
@@ -44,5 +44,27 @@ describe("hhmm", () => {
   it("formats a UTC date in a target tz", () => {
     const d = new Date("2026-06-10T03:30:00Z");
     expect(hhmm(d, "Asia/Kolkata")).toBe("09:00");
+  });
+});
+
+describe("formatLocalDate", () => {
+  it("returns YYYY-MM-DD using LOCAL calendar fields (not UTC)", () => {
+    // Construct a local-midnight Date the same way MonthCalendar does.
+    const d = new Date(2026, 3, 16, 0, 0, 0, 0); // Apr is month 3 (0-indexed)
+    expect(formatLocalDate(d)).toBe("2026-04-16");
+  });
+
+  it("zero-pads single-digit months and days", () => {
+    const d = new Date(2026, 0, 5, 9, 30);
+    expect(formatLocalDate(d)).toBe("2026-01-05");
+  });
+
+  it("is stable for a local-midnight date regardless of host tz offset", () => {
+    // This is the specific class of bug we regressed: for users east of UTC,
+    // a local-midnight Date serialised via toISOString() rolls back one day.
+    // formatLocalDate uses local fields, so the output matches what the user
+    // clicked on the calendar (in any tz the test happens to run in).
+    const d = new Date(2026, 11, 31, 0, 0, 0, 0);
+    expect(formatLocalDate(d)).toBe("2026-12-31");
   });
 });

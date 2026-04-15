@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
-import { COMMON_TIMEZONES } from "@/lib/time";
+import { COMMON_TIMEZONES, formatLocalDate } from "@/lib/time";
 import { MonthCalendar } from "@/components/public/MonthCalendar";
 import { SlotPicker } from "@/components/public/SlotPicker";
 import { BookingHeaderCard } from "@/components/public/BookingHeaderCard";
@@ -50,7 +50,9 @@ export default function PublicBookingPage({ params }: PageProps) {
       if (!selectedDate || !timezone || !eventType) {
         return Promise.resolve({ slots: [] });
       }
-      const dateStr = selectedDate.toISOString().split("T")[0];
+      // Use LOCAL date components — toISOString() converts to UTC and would
+      // return the previous day for users east of UTC (e.g. Asia/Kolkata).
+      const dateStr = formatLocalDate(selectedDate);
       return api.publicSlots(params.slug, dateStr, timezone, params.username);
     },
     enabled: !!selectedDate && !!timezone && !!eventType,
