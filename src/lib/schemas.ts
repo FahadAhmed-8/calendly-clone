@@ -99,6 +99,19 @@ export const updateEventTypeSchema = createEventTypeSchema.partial().extend({
   questions: z.array(customQuestionSchema).optional(),
 });
 
+// --- Account / Profile ---
+// PATCH /api/admin/account — only the existing User columns we persist.
+// Everything else on the Account page (welcome message, language, date
+// format, country) is a UI-only preference kept in localStorage so we
+// don't need a DB migration to add the full Calendly profile surface.
+export const updateAccountSchema = z.object({
+  displayName: z.string().min(1).max(120).optional(),
+  email: z.string().email().optional(),
+  // Allow empty string to clear the avatar. Otherwise must be a URL.
+  avatarUrl: z.union([z.string().url(), z.literal("")]).nullable().optional(),
+  timezone: z.string().min(1).optional(),
+});
+
 // --- Reschedule ---
 export const rescheduleBookingSchema = z.object({
   token: z.string().min(1),
