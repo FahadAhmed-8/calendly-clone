@@ -102,10 +102,10 @@ export default function AvailabilityPage() {
 
   return (
     <AdminShell title="Availability">
-      <div className="flex flex-wrap justify-between items-end gap-4 mb-8">
+      <div className="flex flex-wrap justify-between items-start sm:items-end gap-4 mb-8">
         <div>
-          <h2 className="text-3xl font-extrabold tracking-tight text-on-surface mb-2">Availability</h2>
-          <p className="text-on-surface-variant max-w-md">Manage multiple schedules; link each event type to one.</p>
+          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-on-surface mb-2">Availability</h2>
+          <p className="text-on-surface-variant max-w-md text-sm md:text-base">Manage multiple schedules; link each event type to one.</p>
         </div>
         <div className="flex items-center gap-2">
           <select
