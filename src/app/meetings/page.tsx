@@ -36,11 +36,11 @@ export default function MeetingsPage() {
   return (
     <AdminShell title="Meetings">
       <div className="mb-8">
-        <h2 className="text-3xl font-extrabold tracking-tight text-on-surface mb-2">Meetings</h2>
-        <p className="text-on-surface-variant max-w-md">See everyone who has booked time with you.</p>
+        <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-on-surface mb-2">Meetings</h2>
+        <p className="text-on-surface-variant max-w-md text-sm md:text-base">See everyone who has booked time with you.</p>
       </div>
 
-      <div className="flex gap-6 mb-8">
+      <div className="flex gap-4 md:gap-6 mb-8 overflow-x-auto">
         {(["upcoming", "past", "cancelled"] as Tab[]).map((t) => (
           <button key={t} onClick={() => setTab(t)} className={cn(
             "pb-3 text-sm font-semibold capitalize transition-colors relative",
