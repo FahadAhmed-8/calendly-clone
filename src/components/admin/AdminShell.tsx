@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/cn";
 
@@ -24,6 +25,18 @@ const secondaryNav = [
 
 const COLLAPSE_KEY = "scheduler.sidebar.collapsed";
 const ACTIVE_BLUE = "#006bff"; // Calendly's action blue — matches primary-container.
+
+// Single source of truth for the "not built yet" notice — reused by the
+// Upgrade-plan pill and the Help-menu items. Keeps copy consistent.
+const showUpgradeToast = () =>
+  toast("Upgrade plan — coming soon", {
+    description: "Analytics, workflows & premium integrations are on the roadmap.",
+  });
+
+const showComingSoonToast = (feature: string) =>
+  toast(`${feature} — coming soon`, {
+    description: "This corner of the product isn't wired up yet.",
+  });
 
 export function AdminShell({ children, title }: { children: React.ReactNode; title: string }) {
   const pathname = usePathname();
@@ -201,7 +214,13 @@ export function AdminShell({ children, title }: { children: React.ReactNode; tit
         {/* Footer: Upgrade plan + secondary nav + Help */}
         <div className={cn("shrink-0 pb-5 pt-3 border-t border-outline-variant/20 space-y-0.5", collapsed ? "px-2" : "px-3")}>
           {!collapsed && (
-            <div className="mx-1 mb-2 p-3 rounded-xl bg-gradient-to-br from-primary-fixed to-secondary-fixed relative overflow-hidden">
+            <button
+              type="button"
+              onClick={showUpgradeToast}
+              className="w-full text-left mx-1 mb-2 p-3 rounded-xl bg-gradient-to-br from-primary-fixed to-secondary-fixed relative overflow-hidden hover:shadow-elev-2 transition"
+              aria-label="Upgrade plan — coming soon"
+              title="Upgrade plan — coming soon"
+            >
               <div
                 className="absolute inset-0 opacity-50 pointer-events-none"
                 style={{
@@ -215,19 +234,26 @@ export function AdminShell({ children, title }: { children: React.ReactNode; tit
                 <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shrink-0 shadow-elev-1">
                   <Icon name="workspace_premium" filled className="text-lg text-on-primary-fixed-variant" />
                 </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-bold text-on-primary-fixed leading-tight">Upgrade plan</p>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-bold text-on-primary-fixed leading-tight">Upgrade plan</p>
+                    <span className="text-[9px] font-bold tracking-wide uppercase px-1.5 py-0.5 rounded-full bg-white/70 text-on-primary-fixed-variant shrink-0">
+                      Soon
+                    </span>
+                  </div>
                   <p className="text-[11px] text-on-primary-fixed-variant leading-tight mt-0.5">
                     Unlock analytics &amp; workflows
                   </p>
                 </div>
               </div>
-            </div>
+            </button>
           )}
           {collapsed && (
             <button
-              aria-label="Upgrade plan"
-              title="Upgrade plan"
+              type="button"
+              onClick={showUpgradeToast}
+              aria-label="Upgrade plan — coming soon"
+              title="Upgrade plan — coming soon"
               className="mx-auto mb-2 w-10 h-10 rounded-lg bg-gradient-to-br from-primary-fixed to-secondary-fixed flex items-center justify-center shadow-elev-1 hover:shadow-elev-2 transition"
             >
               <Icon name="workspace_premium" filled className="text-lg text-on-primary-fixed-variant" />
@@ -282,10 +308,10 @@ export function AdminShell({ children, title }: { children: React.ReactNode; tit
                   collapsed ? "left-full ml-2 bottom-0" : "left-0 right-0",
                 )}
               >
-                <HelpMenuItem icon="menu_book" label="Documentation" href="#" />
-                <HelpMenuItem icon="chat" label="Contact support" href="#" />
-                <HelpMenuItem icon="keyboard" label="Keyboard shortcuts" href="#" />
-                <HelpMenuItem icon="campaign" label="What's new" href="#" />
+                <HelpMenuItem icon="menu_book" label="Documentation" />
+                <HelpMenuItem icon="chat" label="Contact support" />
+                <HelpMenuItem icon="keyboard" label="Keyboard shortcuts" />
+                <HelpMenuItem icon="campaign" label="What's new" />
               </div>
             )}
           </div>
@@ -385,15 +411,24 @@ function NavLink({
   );
 }
 
-function HelpMenuItem({ icon, label, href }: { icon: string; label: string; href: string }) {
+function HelpMenuItem({ icon, label }: { icon: string; label: string }) {
+  // Every Help destination is placeholder today — muted greys + "Soon" pill
+  // makes the state obvious without hiding them. Click still fires a friendly
+  // toast instead of navigating to a 404.
   return (
-    <a
-      href={href}
+    <button
+      type="button"
       role="menuitem"
-      className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-on-surface hover:bg-surface-container-low transition-colors"
+      onClick={() => showComingSoonToast(label)}
+      aria-disabled="true"
+      className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-outline cursor-not-allowed hover:bg-surface-container-low/50 transition-colors"
+      title={`${label} — coming soon`}
     >
-      <Icon name={icon} className="text-lg text-outline" />
-      <span>{label}</span>
-    </a>
+      <Icon name={icon} className="text-lg text-outline-variant" />
+      <span className="flex-1 text-left">{label}</span>
+      <span className="text-[9px] font-bold tracking-wide uppercase px-1.5 py-0.5 rounded-full bg-surface-container-high text-outline shrink-0">
+        Soon
+      </span>
+    </button>
   );
 }
