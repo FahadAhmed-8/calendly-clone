@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Input, Label, Textarea, FieldError } from "@/components/ui/Input";
+import { PageLoader } from "@/components/ui/PageLoader";
 import { api } from "@/lib/api-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -37,11 +38,7 @@ export default function EventTypesPage() {
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="bg-surface-container-lowest rounded-xl p-6 h-44 animate-pulse" />
-          ))}
-        </div>
+        <PageLoader />
       ) : !eventTypes?.length ? (
         <EmptyState onCreate={() => setCreateOpen(true)} />
       ) : (
