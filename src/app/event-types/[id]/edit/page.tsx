@@ -17,6 +17,12 @@ type Question = {
   options?: string[] | null;
   required?: boolean;
   position?: number;
+  /**
+   * Local-only raw input string for the comma-separated Dropdown options field.
+   * Keeps trailing commas and whitespace visible while the user is typing so
+   * they can actually type a "," to split entries. Stripped before save.
+   */
+  optionsRaw?: string;
 };
 
 export default function EditEventTypePage() {
@@ -43,7 +49,8 @@ export default function EditEventTypePage() {
         description: form.description, color: form.color, active: form.active,
         bufferBeforeMinutes: form.bufferBeforeMinutes, bufferAfterMinutes: form.bufferAfterMinutes,
         scheduleId: form.scheduleId ?? null,
-        questions,
+        // Drop the local-only `optionsRaw` scratch field before sending.
+        questions: questions.map(({ optionsRaw, ...q }) => q),
       }),
     onSuccess: () => {
       toast.success("Saved");
@@ -188,10 +195,22 @@ export default function EditEventTypePage() {
                     {q.type === "select" && (
                       <Input
                         placeholder="Comma-separated options (e.g. Engineering, Design, PM)"
-                        value={(q.options || []).join(", ")}
+                        value={q.optionsRaw ?? (q.options || []).join(", ")}
                         onChange={(e) => {
-                          const opts = e.target.value.split(",").map((s) => s.trim()).filter(Boolean);
-                          const n = [...questions]; n[i] = { ...n[i], options: opts }; setQuestions(n);
+                          // Keep the raw string (so commas & spaces stay visible
+                          // while typing) alongside the cleaned options array.
+                          const raw = e.target.value;
+                          const opts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+                          const n = [...questions];
+                          n[i] = { ...n[i], options: opts, optionsRaw: raw };
+                          setQuestions(n);
+                        }}
+                        onBlur={() => {
+                          // Normalize the display to clean CSV once focus leaves.
+                          const n = [...questions];
+                          const { optionsRaw: _drop, ...rest } = n[i];
+                          n[i] = rest;
+                          setQuestions(n);
                         }}
                       />
                     )}
