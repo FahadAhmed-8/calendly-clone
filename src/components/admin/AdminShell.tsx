@@ -11,7 +11,7 @@ const nav = [
   { href: "/availability", label: "Availability", icon: "calendar_today" },
   { href: "/contacts", label: "Contacts", icon: "contacts" },
   { href: "/workflows", label: "Workflows", icon: "alt_route" },
-  { href: "/integrations", label: "Integrations & apps", icon: "apps" },
+  { href: "/integrations", label: "Integrations", icon: "apps" },
   { href: "/routing", label: "Routing", icon: "route" },
 ];
 
@@ -170,10 +170,14 @@ export function AdminShell({ children, title }: { children: React.ReactNode; tit
                 <button className="hover:text-primary transition-all"><Icon name="notifications" /></button>
                 <button className="hover:text-primary transition-all"><Icon name="help" /></button>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="hidden sm:inline text-sm font-medium text-on-surface-variant">Fhd</span>
-                <div className="w-8 h-8 rounded-full bg-primary-fixed-dim flex items-center justify-center text-primary font-bold text-sm">F</div>
-              </div>
+              <Link
+                href="/account"
+                aria-label="Account"
+                className="flex items-center gap-3 rounded-full pl-2 pr-1 py-1 -mr-1 hover:bg-surface-container-lowest/60 transition-colors group"
+              >
+                <span className="hidden sm:inline text-sm font-medium text-on-surface-variant group-hover:text-on-surface transition-colors">Fhd</span>
+                <div className="w-8 h-8 rounded-full bg-primary-fixed-dim flex items-center justify-center text-primary font-bold text-sm ring-2 ring-transparent group-hover:ring-primary/30 transition">F</div>
+              </Link>
             </div>
           </div>
         </header>
