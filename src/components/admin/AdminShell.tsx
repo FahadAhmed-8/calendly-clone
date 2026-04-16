@@ -9,6 +9,18 @@ const nav = [
   { href: "/event-types", label: "Event Types", icon: "event_note" },
   { href: "/meetings", label: "Meetings", icon: "schedule" },
   { href: "/availability", label: "Availability", icon: "calendar_today" },
+  { href: "/contacts", label: "Contacts", icon: "contacts" },
+  { href: "/workflows", label: "Workflows", icon: "alt_route" },
+  { href: "/integrations", label: "Integrations & apps", icon: "apps" },
+  { href: "/routing", label: "Routing", icon: "route" },
+];
+
+// Secondary nav — shown above the Account button in a separate section, the
+// way Calendly groups "Analytics" and "Admin center" away from the primary
+// workflow links.
+const secondaryNav = [
+  { href: "/analytics", label: "Analytics", icon: "bar_chart" },
+  { href: "/admin-center", label: "Admin center", icon: "admin_panel_settings" },
 ];
 
 export function AdminShell({ children, title }: { children: React.ReactNode; title: string }) {
@@ -59,8 +71,9 @@ export function AdminShell({ children, title }: { children: React.ReactNode; tit
           "md:translate-x-0",
         )}
       >
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-8">
+        {/* Brand + close button (mobile). Fixed at the top — does NOT scroll. */}
+        <div className="px-6 pt-6 pb-4 shrink-0">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-on-primary">
                 <Icon name="event_note" />
@@ -70,7 +83,6 @@ export function AdminShell({ children, title }: { children: React.ReactNode; tit
                 <p className="text-[10px] uppercase tracking-wider text-outline font-bold">Admin Console</p>
               </div>
             </div>
-            {/* Close button inside the drawer — mobile only. */}
             <button
               onClick={() => setMobileOpen(false)}
               aria-label="Close menu"
@@ -79,32 +91,53 @@ export function AdminShell({ children, title }: { children: React.ReactNode; tit
               <Icon name="close" />
             </button>
           </div>
-          <nav className="space-y-1">
-            {nav.map((n) => {
-              const active = pathname === n.href || pathname.startsWith(n.href + "/");
-              return (
-                <Link
-                  key={n.href}
-                  href={n.href}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 font-semibold",
-                    active ? "text-primary bg-surface-container-lowest" : "text-on-surface-variant hover:bg-surface-container-lowest/60",
-                  )}
-                >
-                  <Icon name={n.icon} /> <span>{n.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
         </div>
-        <div className="mt-auto p-6 space-y-1">
+
+        {/* Primary nav — scrollable region between the brand and the footer
+            section so tall sidebars on short viewports (e.g. landscape phone)
+            don't clip nav items. */}
+        <nav className="flex-1 overflow-y-auto px-6 pb-4 space-y-1">
+          {nav.map((n) => {
+            const active = pathname === n.href || pathname.startsWith(n.href + "/");
+            return (
+              <Link
+                key={n.href}
+                href={n.href}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 font-semibold",
+                  active ? "text-primary bg-surface-container-lowest" : "text-on-surface-variant hover:bg-surface-container-lowest/60",
+                )}
+              >
+                <Icon name={n.icon} /> <span>{n.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Footer: secondary nav + Account. Sits below the scroll region. */}
+        <div className="shrink-0 px-6 pb-6 pt-2 space-y-1 border-t border-outline-variant/20">
+          {secondaryNav.map((n) => {
+            const active = pathname === n.href || pathname.startsWith(n.href + "/");
+            return (
+              <Link
+                key={n.href}
+                href={n.href}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 font-semibold",
+                  active ? "text-primary bg-surface-container-lowest" : "text-on-surface-variant hover:bg-surface-container-lowest/60",
+                )}
+              >
+                <Icon name={n.icon} /> <span className="text-sm">{n.label}</span>
+              </Link>
+            );
+          })}
           {(() => {
             const active = pathname === "/account" || pathname.startsWith("/account/");
             return (
               <Link
                 href="/account"
                 className={cn(
-                  "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors font-semibold",
+                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors font-semibold",
                   active
                     ? "text-primary bg-surface-container-lowest"
                     : "text-on-surface-variant hover:bg-surface-container-lowest/60",
