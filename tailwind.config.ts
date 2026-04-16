@@ -67,10 +67,25 @@ const config: Config = {
         full: "9999px",
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
-        headline: ["Inter", "sans-serif"],
-        body: ["Inter", "sans-serif"],
-        label: ["Inter", "sans-serif"],
+        // Calendly-style stack: Proxima Nova first (licensed; only resolves
+        // when visitors have it locally or via Adobe Fonts), then the closest
+        // free web-font alternatives, then system sans.
+        sans: [
+          "proxima-nova",
+          "Proxima Nova",
+          "Mulish",
+          "Inter",
+          "ui-sans-serif",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "Helvetica",
+          "Arial",
+          "sans-serif",
+        ],
+        headline: ["proxima-nova", "Proxima Nova", "Mulish", "Inter", "sans-serif"],
+        body: ["proxima-nova", "Proxima Nova", "Mulish", "Inter", "sans-serif"],
+        label: ["proxima-nova", "Proxima Nova", "Mulish", "Inter", "sans-serif"],
       },
       boxShadow: {
         "elev-1": "0 1px 2px rgba(10, 37, 64, 0.06)",
