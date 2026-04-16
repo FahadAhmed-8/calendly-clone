@@ -3,7 +3,7 @@ import { ComingSoonPage } from "@/components/admin/ComingSoon";
 export default function IntegrationsPage() {
   return (
     <ComingSoonPage
-      title="Integrations & apps"
+      title="Integrations"
       icon="apps"
       tagline="Connect Scheduler to the tools you already use — your calendar, your video platform, your CRM — so bookings flow everywhere in real time."
       features={[
