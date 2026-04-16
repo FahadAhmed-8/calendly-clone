@@ -1,12 +1,13 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/cn";
 
+// Primary nav — the main workflow destinations.
 const nav = [
-  { href: "/event-types", label: "Event Types", icon: "event_note" },
+  { href: "/event-types", label: "Scheduling", icon: "event_note" },
   { href: "/meetings", label: "Meetings", icon: "schedule" },
   { href: "/availability", label: "Availability", icon: "calendar_today" },
   { href: "/contacts", label: "Contacts", icon: "contacts" },
@@ -15,35 +16,74 @@ const nav = [
   { href: "/routing", label: "Routing", icon: "route" },
 ];
 
-// Secondary nav — shown above the Account button in a separate section, the
-// way Calendly groups "Analytics" and "Admin center" away from the primary
-// workflow links.
+// Secondary nav — grouped above the footer section, Calendly-style.
 const secondaryNav = [
   { href: "/analytics", label: "Analytics", icon: "bar_chart" },
   { href: "/admin-center", label: "Admin center", icon: "admin_panel_settings" },
 ];
 
+const COLLAPSE_KEY = "scheduler.sidebar.collapsed";
+const ACTIVE_BLUE = "#006bff"; // Calendly's action blue — matches primary-container.
+
 export function AdminShell({ children, title }: { children: React.ReactNode; title: string }) {
   const pathname = usePathname();
-  // Mobile drawer state. Defaults closed so the content fills the screen
-  // on phones. On md+ the sidebar is always visible and this state is a
-  // no-op (CSS handles that with `md:translate-x-0`).
   const [mobileOpen, setMobileOpen] = useState(false);
+  // Desktop collapse toggle — persists in localStorage so it survives reloads.
+  const [collapsed, setCollapsed] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const helpRef = useRef<HTMLDivElement | null>(null);
 
-  // Close the drawer on navigation — otherwise it stays open covering the
-  // page the user just navigated to.
-  useEffect(() => { setMobileOpen(false); }, [pathname]);
-
-  // Close on Escape for keyboard users.
+  // Hydrate collapse state on mount (SSR-safe).
   useEffect(() => {
-    if (!mobileOpen) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMobileOpen(false); };
+    try {
+      const v = typeof window !== "undefined" ? window.localStorage.getItem(COLLAPSE_KEY) : null;
+      if (v === "1") setCollapsed(true);
+    } catch {
+      /* ignore storage unavailable */
+    }
+  }, []);
+  const toggleCollapsed = () => {
+    setCollapsed((c) => {
+      const next = !c;
+      try {
+        window.localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
+
+  // Close drawer / help popover on nav.
+  useEffect(() => {
+    setMobileOpen(false);
+    setHelpOpen(false);
+  }, [pathname]);
+
+  // Close drawer on Escape.
+  useEffect(() => {
+    if (!mobileOpen && !helpOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setMobileOpen(false);
+      setHelpOpen(false);
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [mobileOpen]);
+  }, [mobileOpen, helpOpen]);
 
-  // Lock body scroll while the drawer is open so the page behind doesn't
-  // scroll along with drag/swipe gestures on mobile.
+  // Close help popover on outside click.
+  useEffect(() => {
+    if (!helpOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (!helpRef.current) return;
+      if (!helpRef.current.contains(e.target as Node)) setHelpOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [helpOpen]);
+
+  // Lock body scroll while the drawer is open.
   useEffect(() => {
     if (!mobileOpen) return;
     const prev = document.body.style.overflow;
@@ -51,9 +91,15 @@ export function AdminShell({ children, title }: { children: React.ReactNode; tit
     return () => { document.body.style.overflow = prev; };
   }, [mobileOpen]);
 
+  const sidebarWidth = collapsed ? "w-[72px]" : "w-[240px]";
+  const mainOffset = collapsed ? "md:ml-[72px]" : "md:ml-[240px]";
+  const headerOffset = collapsed ? "md:left-[72px]" : "md:left-[240px]";
+
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
+
   return (
     <>
-      {/* Mobile backdrop — rendered only when the drawer is open. */}
+      {/* Mobile backdrop */}
       {mobileOpen && (
         <button
           aria-label="Close menu"
@@ -64,98 +110,198 @@ export function AdminShell({ children, title }: { children: React.ReactNode; tit
 
       <aside
         className={cn(
-          "fixed left-0 top-0 h-full w-[240px] bg-surface-container-low flex flex-col z-50",
-          "transition-transform duration-200 ease-out",
-          // On mobile: slide off-screen when closed. On md+: always visible.
-          mobileOpen ? "translate-x-0" : "-translate-x-full",
+          "fixed left-0 top-0 h-full bg-white border-r border-outline-variant/30 flex flex-col z-50",
+          "transition-[transform,width] duration-200 ease-out",
+          sidebarWidth,
+          // Mobile: slide off-screen when closed (and always full 240px wide
+          // so content is readable when opened).
+          mobileOpen ? "translate-x-0 w-[280px]" : "-translate-x-full",
+          // Desktop: always visible; width is controlled by `collapsed`.
           "md:translate-x-0",
         )}
       >
-        {/* Brand + close button (mobile). Fixed at the top — does NOT scroll. */}
-        <div className="px-6 pt-6 pb-4 shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-on-primary">
-                <Icon name="event_note" />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold text-on-surface leading-tight">Scheduler</h1>
-                <p className="text-[10px] uppercase tracking-wider text-outline font-bold">Admin Console</p>
-              </div>
+        {/* Brand + collapse toggle */}
+        <div className={cn("flex items-center shrink-0 pt-6 pb-4", collapsed ? "px-4 justify-center" : "px-6 justify-between")}>
+          <Link href="/event-types" className="flex items-center gap-2 group" aria-label="Scheduler home">
+            <div className="w-9 h-9 rounded-lg bg-primary-container flex items-center justify-center text-on-primary shadow-elev-1 shrink-0">
+              <Icon name="event_note" filled className="text-xl" />
             </div>
-            <button
-              onClick={() => setMobileOpen(false)}
-              aria-label="Close menu"
-              className="md:hidden text-outline hover:text-on-surface p-1 -mr-1"
-            >
-              <Icon name="close" />
-            </button>
-          </div>
+            {!collapsed && (
+              <span className="text-[22px] font-extrabold text-on-surface tracking-tight leading-none group-hover:text-primary-container transition-colors">
+                Scheduler
+              </span>
+            )}
+          </Link>
+          {!collapsed && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setMobileOpen(false)}
+                aria-label="Close menu"
+                className="md:hidden text-outline hover:text-on-surface p-1"
+              >
+                <Icon name="close" />
+              </button>
+              <button
+                onClick={toggleCollapsed}
+                aria-label="Collapse sidebar"
+                className="hidden md:inline-flex w-8 h-8 items-center justify-center rounded-md text-outline hover:text-on-surface hover:bg-surface-container-low transition"
+              >
+                <Icon name="chevron_left" className="text-xl" />
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Primary nav — scrollable region between the brand and the footer
-            section so tall sidebars on short viewports (e.g. landscape phone)
-            don't clip nav items. */}
-        <nav className="flex-1 overflow-y-auto px-6 pb-4 space-y-1">
+        {/* Collapsed-only expand button (replaces the hidden close/collapse row) */}
+        {collapsed && (
+          <button
+            onClick={toggleCollapsed}
+            aria-label="Expand sidebar"
+            className="hidden md:flex mx-auto mb-2 w-8 h-8 items-center justify-center rounded-md text-outline hover:text-on-surface hover:bg-surface-container-low transition"
+          >
+            <Icon name="chevron_right" className="text-xl" />
+          </button>
+        )}
+
+        {/* Create button — outlined pill, full width. Opens the event-types
+            create modal via the ?new=1 URL param. */}
+        <div className={cn("shrink-0 pb-3", collapsed ? "px-2" : "px-6")}>
+          <Link
+            href="/event-types?new=1"
+            className={cn(
+              "flex items-center justify-center gap-2 h-11 rounded-full font-semibold text-sm",
+              "bg-white text-on-surface ghost-border hover:bg-surface-container-low transition-colors",
+              collapsed && "px-0",
+            )}
+            aria-label="Create"
+            title="Create"
+          >
+            <Icon name="add" className="text-xl" />
+            {!collapsed && <span>Create</span>}
+          </Link>
+        </div>
+
+        {/* Primary nav */}
+        <nav className={cn("flex-1 overflow-y-auto pb-4 space-y-0.5", collapsed ? "px-2" : "px-3")}>
           {nav.map((n) => {
-            const active = pathname === n.href || pathname.startsWith(n.href + "/");
+            const active = isActive(n.href);
             return (
-              <Link
+              <NavLink
                 key={n.href}
                 href={n.href}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 font-semibold",
-                  active ? "text-primary bg-surface-container-lowest" : "text-on-surface-variant hover:bg-surface-container-lowest/60",
-                )}
-              >
-                <Icon name={n.icon} /> <span>{n.label}</span>
-              </Link>
+                icon={n.icon}
+                label={n.label}
+                active={active}
+                collapsed={collapsed}
+              />
             );
           })}
         </nav>
 
-        {/* Footer: secondary nav + Account. Sits below the scroll region. */}
-        <div className="shrink-0 px-6 pb-6 pt-2 space-y-1 border-t border-outline-variant/20">
+        {/* Footer: Upgrade plan + secondary nav + Help */}
+        <div className={cn("shrink-0 pb-5 pt-3 border-t border-outline-variant/20 space-y-0.5", collapsed ? "px-2" : "px-3")}>
+          {!collapsed && (
+            <div className="mx-1 mb-2 p-3 rounded-xl bg-gradient-to-br from-primary-fixed to-secondary-fixed relative overflow-hidden">
+              <div
+                className="absolute inset-0 opacity-50 pointer-events-none"
+                style={{
+                  backgroundImage:
+                    "radial-gradient(circle at 1px 1px, rgba(0, 107, 255, 0.25) 1px, transparent 0)",
+                  backgroundSize: "16px 16px",
+                }}
+                aria-hidden
+              />
+              <div className="relative flex items-start gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shrink-0 shadow-elev-1">
+                  <Icon name="workspace_premium" filled className="text-lg text-on-primary-fixed-variant" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-on-primary-fixed leading-tight">Upgrade plan</p>
+                  <p className="text-[11px] text-on-primary-fixed-variant leading-tight mt-0.5">
+                    Unlock analytics &amp; workflows
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          {collapsed && (
+            <button
+              aria-label="Upgrade plan"
+              title="Upgrade plan"
+              className="mx-auto mb-2 w-10 h-10 rounded-lg bg-gradient-to-br from-primary-fixed to-secondary-fixed flex items-center justify-center shadow-elev-1 hover:shadow-elev-2 transition"
+            >
+              <Icon name="workspace_premium" filled className="text-lg text-on-primary-fixed-variant" />
+            </button>
+          )}
+
           {secondaryNav.map((n) => {
-            const active = pathname === n.href || pathname.startsWith(n.href + "/");
+            const active = isActive(n.href);
             return (
-              <Link
+              <NavLink
                 key={n.href}
                 href={n.href}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 font-semibold",
-                  active ? "text-primary bg-surface-container-lowest" : "text-on-surface-variant hover:bg-surface-container-lowest/60",
-                )}
-              >
-                <Icon name={n.icon} /> <span className="text-sm">{n.label}</span>
-              </Link>
+                icon={n.icon}
+                label={n.label}
+                active={active}
+                collapsed={collapsed}
+              />
             );
           })}
-          {(() => {
-            const active = pathname === "/account" || pathname.startsWith("/account/");
-            return (
-              <Link
-                href="/account"
+
+          {/* Help dropdown */}
+          <div className="relative" ref={helpRef}>
+            <button
+              onClick={() => setHelpOpen((v) => !v)}
+              aria-haspopup="menu"
+              aria-expanded={helpOpen}
+              className={cn(
+                "w-full flex items-center gap-3 rounded-lg transition-colors font-semibold text-sm",
+                collapsed ? "justify-center h-10 w-10 mx-auto" : "px-3 py-2.5",
+                helpOpen
+                  ? "text-on-surface bg-surface-container-low"
+                  : "text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface",
+              )}
+              title="Help"
+            >
+              <Icon name="help" filled={helpOpen} className="text-xl shrink-0" />
+              {!collapsed && (
+                <>
+                  <span className="flex-1 text-left">Help</span>
+                  <Icon
+                    name={helpOpen ? "expand_less" : "expand_more"}
+                    className="text-base text-outline"
+                  />
+                </>
+              )}
+            </button>
+            {helpOpen && (
+              <div
+                role="menu"
                 className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors font-semibold",
-                  active
-                    ? "text-primary bg-surface-container-lowest"
-                    : "text-on-surface-variant hover:bg-surface-container-lowest/60",
+                  "absolute bottom-full mb-2 min-w-[200px] rounded-xl bg-white shadow-elev-3 ring-1 ring-outline-variant/50 py-2 z-50",
+                  collapsed ? "left-full ml-2 bottom-0" : "left-0 right-0",
                 )}
               >
-                <Icon name="account_circle" /><span className="text-sm">Account</span>
-              </Link>
-            );
-          })()}
+                <HelpMenuItem icon="menu_book" label="Documentation" href="#" />
+                <HelpMenuItem icon="chat" label="Contact support" href="#" />
+                <HelpMenuItem icon="keyboard" label="Keyboard shortcuts" href="#" />
+                <HelpMenuItem icon="campaign" label="What's new" href="#" />
+              </div>
+            )}
+          </div>
         </div>
       </aside>
 
-      {/* Main column — only offsets on md+ where the sidebar is always shown. */}
-      <div className="md:ml-[240px] min-h-screen">
-        <header className="fixed top-0 left-0 right-0 md:left-[240px] h-16 bg-surface-container-lowest/80 backdrop-blur-md z-30">
+      {/* Main column */}
+      <div className={cn("min-h-screen transition-[margin] duration-200 ease-out", mainOffset)}>
+        <header
+          className={cn(
+            "fixed top-0 left-0 right-0 h-16 bg-white/85 backdrop-blur-md z-30 border-b border-outline-variant/30 transition-[left] duration-200 ease-out",
+            headerOffset,
+          )}
+        >
           <div className="flex justify-between items-center px-4 md:px-8 h-full max-w-[1200px] mx-auto w-full">
             <div className="flex items-center gap-3 min-w-0">
-              {/* Hamburger — mobile only. */}
               <button
                 onClick={() => setMobileOpen(true)}
                 aria-label="Open menu"
@@ -165,15 +311,19 @@ export function AdminShell({ children, title }: { children: React.ReactNode; tit
               </button>
               <div className="text-lg md:text-xl font-bold tracking-tight text-on-surface truncate">{title}</div>
             </div>
-            <div className="flex items-center gap-3 md:gap-6">
-              <div className="hidden sm:flex items-center gap-4 text-outline">
-                <button className="hover:text-primary transition-all"><Icon name="notifications" /></button>
-                <button className="hover:text-primary transition-all"><Icon name="help" /></button>
+            <div className="flex items-center gap-3 md:gap-5">
+              <div className="hidden sm:flex items-center gap-1 text-outline">
+                <button aria-label="Notifications" className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-surface-container-low hover:text-on-surface transition">
+                  <Icon name="notifications" />
+                </button>
+                <button aria-label="Help" className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-surface-container-low hover:text-on-surface transition">
+                  <Icon name="help" />
+                </button>
               </div>
               <Link
                 href="/account"
                 aria-label="Account"
-                className="flex items-center gap-3 rounded-full pl-2 pr-1 py-1 -mr-1 hover:bg-surface-container-lowest/60 transition-colors group"
+                className="flex items-center gap-3 rounded-full pl-2 pr-1 py-1 -mr-1 hover:bg-surface-container-low transition-colors group"
               >
                 <span className="hidden sm:inline text-sm font-medium text-on-surface-variant group-hover:text-on-surface transition-colors">Fhd</span>
                 <div className="w-8 h-8 rounded-full bg-primary-fixed-dim flex items-center justify-center text-primary font-bold text-sm ring-2 ring-transparent group-hover:ring-primary/30 transition">F</div>
@@ -184,5 +334,66 @@ export function AdminShell({ children, title }: { children: React.ReactNode; tit
         <main className="pt-24 px-4 md:px-8 pb-16 max-w-[1200px] mx-auto">{children}</main>
       </div>
     </>
+  );
+}
+
+/**
+ * One sidebar nav item. Active state = light-blue pill + Calendly blue text
+ * + 3px left accent bar. Inactive = muted text, subtle hover.
+ */
+function NavLink({
+  href,
+  icon,
+  label,
+  active,
+  collapsed,
+}: {
+  href: string;
+  icon: string;
+  label: string;
+  active: boolean;
+  collapsed: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      title={collapsed ? label : undefined}
+      className={cn(
+        "group relative flex items-center rounded-lg transition-colors font-semibold text-sm",
+        collapsed ? "justify-center h-10 w-10 mx-auto" : "px-3 py-2.5 gap-3",
+        active
+          ? "bg-[#E6F0FF]"
+          : "text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface",
+      )}
+      style={active ? { color: ACTIVE_BLUE } : undefined}
+    >
+      {active && !collapsed && (
+        <span
+          className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full"
+          style={{ backgroundColor: ACTIVE_BLUE }}
+          aria-hidden
+        />
+      )}
+      <Icon
+        name={icon}
+        filled={active}
+        className="text-xl shrink-0"
+        /* On inactive items, let the icon pick up hover color from the link. */
+      />
+      {!collapsed && <span className="truncate">{label}</span>}
+    </Link>
+  );
+}
+
+function HelpMenuItem({ icon, label, href }: { icon: string; label: string; href: string }) {
+  return (
+    <a
+      href={href}
+      role="menuitem"
+      className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-on-surface hover:bg-surface-container-low transition-colors"
+    >
+      <Icon name={icon} className="text-lg text-outline" />
+      <span>{label}</span>
+    </a>
   );
 }
