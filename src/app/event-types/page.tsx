@@ -11,13 +11,26 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function EventTypesPage() {
   const qc = useQueryClient();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: eventTypes, isLoading } = useQuery({ queryKey: ["event-types"], queryFn: api.listEventTypes });
   const [createOpen, setCreateOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<{ id: string; name: string } | null>(null);
+
+  // The sidebar "+ Create" button links here with ?new=1 — open the create
+  // modal and then clean the param off the URL so a page refresh doesn't
+  // reopen it.
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      setCreateOpen(true);
+      router.replace("/event-types", { scroll: false });
+    }
+  }, [searchParams, router]);
 
   const del = useMutation({
     mutationFn: (id: string) => api.deleteEventType(id),
@@ -28,7 +41,7 @@ export default function EventTypesPage() {
   const copyLink = (url: string) => { navigator.clipboard.writeText(url); toast.success("Link copied"); };
 
   return (
-    <AdminShell title="Event Types">
+    <AdminShell title="Scheduling">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 sm:gap-6 mb-8 md:mb-10">
         <div>
           <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-on-surface mb-2">Event Types</h2>
