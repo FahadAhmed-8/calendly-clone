@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { formatInTimeZone } from "date-fns-tz";
 import { cn } from "@/lib/cn";
+import { PageLoader } from "@/components/ui/PageLoader";
 
 type Tab = "upcoming" | "past" | "cancelled";
 
@@ -53,7 +54,7 @@ export default function MeetingsPage() {
       </div>
 
       {isLoading ? (
-        <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-16 bg-surface-container-lowest rounded-xl animate-pulse" />)}</div>
+        <PageLoader />
       ) : !meetings?.length ? (
         <div className="flex flex-col items-center text-center py-20">
           <div className="w-20 h-20 rounded-full bg-surface-container-low flex items-center justify-center mb-4"><Icon name="event_busy" className="text-4xl text-outline" /></div>

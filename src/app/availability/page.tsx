@@ -3,6 +3,7 @@ import { AdminShell } from "@/components/admin/AdminShell";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { PageLoader } from "@/components/ui/PageLoader";
 import { api } from "@/lib/api-client";
 import { COMMON_TIMEZONES, formatLocalDate } from "@/lib/time";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -15,7 +16,7 @@ type Override = { date: string; blocks: { start: string; end: string }[] };
 
 export default function AvailabilityPage() {
   const qc = useQueryClient();
-  const { data: schedules } = useQuery({ queryKey: ["schedules"], queryFn: api.listSchedules });
+  const { data: schedules, isLoading: schedulesLoading } = useQuery({ queryKey: ["schedules"], queryFn: api.listSchedules });
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // Auto-pick the default schedule when list loads.
@@ -130,6 +131,8 @@ export default function AvailabilityPage() {
           </Button>
         </div>
       </div>
+
+      {schedulesLoading && !selected && <PageLoader />}
 
       {selected && (
         <div className="bg-surface-container-lowest rounded-xl p-4 md:p-8 shadow-elev-1 mb-6">

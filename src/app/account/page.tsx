@@ -9,6 +9,7 @@ import { COMMON_TIMEZONES } from "@/lib/time";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { PageLoader } from "@/components/ui/PageLoader";
 
 // UI-only preferences kept in localStorage. These aren't columns on the
 // User model — adding them would require a migration and they're purely
@@ -117,7 +118,7 @@ export default function AccountPage() {
   if (isLoading || !form) {
     return (
       <AdminShell title="Account">
-        <div className="h-96 animate-pulse bg-surface-container-lowest rounded-xl" />
+        <PageLoader />
       </AdminShell>
     );
   }
