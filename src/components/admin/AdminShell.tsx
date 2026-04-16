@@ -6,21 +6,23 @@ import { toast } from "sonner";
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/cn";
 
-// Primary nav — the main workflow destinations.
-const nav = [
+// Primary nav — the main workflow destinations. `comingSoon` surfaces a
+// small "Soon" pill next to the label so users can see at a glance which
+// destinations are wired up versus which are still placeholder screens.
+const nav: Array<{ href: string; label: string; icon: string; comingSoon?: boolean }> = [
   { href: "/event-types", label: "Scheduling", icon: "event_note" },
   { href: "/meetings", label: "Meetings", icon: "schedule" },
   { href: "/availability", label: "Availability", icon: "calendar_today" },
-  { href: "/contacts", label: "Contacts", icon: "contacts" },
-  { href: "/workflows", label: "Workflows", icon: "alt_route" },
-  { href: "/integrations", label: "Integrations", icon: "apps" },
-  { href: "/routing", label: "Routing", icon: "route" },
+  { href: "/contacts", label: "Contacts", icon: "contacts", comingSoon: true },
+  { href: "/workflows", label: "Workflows", icon: "alt_route", comingSoon: true },
+  { href: "/integrations", label: "Integrations", icon: "apps", comingSoon: true },
+  { href: "/routing", label: "Routing", icon: "route", comingSoon: true },
 ];
 
 // Secondary nav — grouped above the footer section, Calendly-style.
-const secondaryNav = [
-  { href: "/analytics", label: "Analytics", icon: "bar_chart" },
-  { href: "/admin-center", label: "Admin center", icon: "admin_panel_settings" },
+const secondaryNav: Array<{ href: string; label: string; icon: string; comingSoon?: boolean }> = [
+  { href: "/analytics", label: "Analytics", icon: "bar_chart", comingSoon: true },
+  { href: "/admin-center", label: "Admin center", icon: "admin_panel_settings", comingSoon: true },
 ];
 
 const COLLAPSE_KEY = "scheduler.sidebar.collapsed";
@@ -206,6 +208,7 @@ export function AdminShell({ children, title }: { children: React.ReactNode; tit
                 label={n.label}
                 active={active}
                 collapsed={collapsed}
+                comingSoon={n.comingSoon}
               />
             );
           })}
@@ -270,6 +273,7 @@ export function AdminShell({ children, title }: { children: React.ReactNode; tit
                 label={n.label}
                 active={active}
                 collapsed={collapsed}
+                comingSoon={n.comingSoon}
               />
             );
           })}
@@ -365,7 +369,9 @@ export function AdminShell({ children, title }: { children: React.ReactNode; tit
 
 /**
  * One sidebar nav item. Active state = light-blue pill + Calendly blue text
- * + 3px left accent bar. Inactive = muted text, subtle hover.
+ * + 3px left accent bar. Inactive = muted text, subtle hover. Items marked
+ * `comingSoon` render a tiny Calendly-blue "Soon" pill next to the label
+ * (hidden when the sidebar is collapsed to the 72px rail).
  */
 function NavLink({
   href,
@@ -373,17 +379,19 @@ function NavLink({
   label,
   active,
   collapsed,
+  comingSoon,
 }: {
   href: string;
   icon: string;
   label: string;
   active: boolean;
   collapsed: boolean;
+  comingSoon?: boolean;
 }) {
   return (
     <Link
       href={href}
-      title={collapsed ? label : undefined}
+      title={collapsed ? `${label}${comingSoon ? " — coming soon" : ""}` : undefined}
       className={cn(
         "group relative flex items-center rounded-lg transition-colors font-semibold text-sm",
         collapsed ? "justify-center h-10 w-10 mx-auto" : "px-3 py-2.5 gap-3",
@@ -406,7 +414,28 @@ function NavLink({
         className="text-xl shrink-0"
         /* On inactive items, let the icon pick up hover color from the link. */
       />
-      {!collapsed && <span className="truncate">{label}</span>}
+      {!collapsed && (
+        <>
+          <span className="flex-1 truncate">{label}</span>
+          {comingSoon && (
+            <span
+              className="text-[9px] font-bold tracking-wide uppercase px-1.5 py-0.5 rounded-full bg-[#E6F0FF] shrink-0"
+              style={{ color: ACTIVE_BLUE }}
+            >
+              Soon
+            </span>
+          )}
+        </>
+      )}
+      {collapsed && comingSoon && (
+        // On the 72px rail, a tiny dot in the top-right corner conveys the
+        // same "not built yet" signal without reintroducing text.
+        <span
+          aria-hidden
+          className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full"
+          style={{ backgroundColor: ACTIVE_BLUE }}
+        />
+      )}
     </Link>
   );
 }
