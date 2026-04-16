@@ -107,11 +107,11 @@ export default function AvailabilityPage() {
           <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-on-surface mb-2">Availability</h2>
           <p className="text-on-surface-variant max-w-md text-sm md:text-base">Manage multiple schedules; link each event type to one.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <select
             value={selectedId ?? ""}
             onChange={(e) => setSelectedId(e.target.value)}
-            className="h-10 px-3 rounded-lg bg-surface-container-lowest ghost-border text-sm font-semibold focus-ring"
+            className="h-10 px-3 rounded-lg bg-surface-container-lowest ghost-border text-sm font-semibold focus-ring flex-1 sm:flex-none min-w-0"
           >
             {schedules?.map((s: any) => (
               <option key={s.id} value={s.id}>{s.name}{s.isDefault ? " (default)" : ""}</option>
@@ -119,6 +119,7 @@ export default function AvailabilityPage() {
           </select>
           <Button
             variant="ghost"
+            className="shrink-0"
             onClick={() => {
               const n = prompt("New schedule name");
               if (!n) return;
@@ -131,14 +132,14 @@ export default function AvailabilityPage() {
       </div>
 
       {selected && (
-        <div className="bg-surface-container-lowest rounded-xl p-8 shadow-elev-1 mb-6">
-          <div className="flex flex-wrap items-end gap-3 justify-between mb-6">
-            <div className="flex items-center gap-3">
+        <div className="bg-surface-container-lowest rounded-xl p-4 md:p-8 shadow-elev-1 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
+            <div className="flex items-center gap-3 flex-wrap">
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onBlur={() => { if (name && name !== selected.name) rename.mutate(); }}
-                className="h-10 px-3 text-lg font-bold rounded bg-surface-container-lowest ghost-border focus-ring"
+                className="h-10 px-3 text-lg font-bold rounded bg-surface-container-lowest ghost-border focus-ring min-w-0 w-full sm:w-auto"
               />
               {selected.isDefault ? (
                 <span className="text-xs font-bold uppercase tracking-wide text-primary">Default</span>
@@ -148,35 +149,46 @@ export default function AvailabilityPage() {
                 </button>
               )}
             </div>
-            <div className="flex items-center gap-2 bg-surface-container-lowest rounded-lg px-4 h-10 ghost-border">
-              <Icon name="public" className="text-outline text-lg" />
-              <select value={timezone} onChange={(e) => setTimezone(e.target.value)} className="bg-transparent text-sm font-semibold focus:outline-none">
+            <div className="flex items-center gap-2 bg-surface-container-lowest rounded-lg px-4 h-10 ghost-border w-full sm:w-auto">
+              <Icon name="public" className="text-outline text-lg shrink-0" />
+              <select value={timezone} onChange={(e) => setTimezone(e.target.value)} className="bg-transparent text-sm font-semibold focus:outline-none flex-1 min-w-0">
                 {COMMON_TIMEZONES.map((tz) => <option key={tz}>{tz}</option>)}
               </select>
             </div>
           </div>
 
           <h3 className="text-lg font-bold mb-4">Weekly hours</h3>
-          <div className="space-y-4">
+          <div className="space-y-4 md:space-y-4 divide-y divide-outline-variant/20 md:divide-y-0">
             {DAYS.map((day, i) => {
               const ranges = rulesByDay[i] || [];
               const enabled = ranges.length > 0;
               return (
-                <div key={day} className="flex items-start gap-6 py-2">
-                  <button onClick={() => setRulesByDay({ ...rulesByDay, [i]: enabled ? [] : [{ start: "09:00", end: "17:00" }] })}
-                    className={`mt-2 w-10 h-5 rounded-full transition-colors relative ${enabled ? "bg-primary" : "bg-outline-variant"}`}>
-                    <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${enabled ? "left-5" : "left-0.5"}`} />
-                  </button>
-                  <div className="w-12 pt-2 text-sm font-semibold text-on-surface">{day}</div>
+                <div
+                  key={day}
+                  className="flex flex-col md:flex-row md:items-start md:gap-6 gap-3 py-3 md:py-2 first:pt-0 md:first:pt-2"
+                >
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setRulesByDay({ ...rulesByDay, [i]: enabled ? [] : [{ start: "09:00", end: "17:00" }] })}
+                      className={`md:mt-2 w-10 h-5 rounded-full transition-colors relative shrink-0 ${enabled ? "bg-primary" : "bg-outline-variant"}`}
+                      aria-label={`Toggle ${day}`}
+                    >
+                      <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${enabled ? "left-5" : "left-0.5"}`} />
+                    </button>
+                    <div className="w-12 md:pt-2 text-sm font-semibold text-on-surface">{day}</div>
+                    {!enabled && (
+                      <span className="md:hidden text-sm text-outline">Unavailable</span>
+                    )}
+                  </div>
                   {enabled ? (
-                    <div className="flex-1 space-y-2">
+                    <div className="flex-1 space-y-2 md:pl-0 pl-[52px]">
                       {ranges.map((r, idx) => (
                         <div key={idx} className="flex items-center gap-2">
                           <TimeInput value={r.start} onChange={(v) => {
                             const next = [...ranges]; next[idx] = { ...next[idx], start: v };
                             setRulesByDay({ ...rulesByDay, [i]: next });
                           }} />
-                          <span className="text-outline">–</span>
+                          <span className="text-outline shrink-0">–</span>
                           <TimeInput value={r.end} onChange={(v) => {
                             const next = [...ranges]; next[idx] = { ...next[idx], end: v };
                             setRulesByDay({ ...rulesByDay, [i]: next });
@@ -184,7 +196,7 @@ export default function AvailabilityPage() {
                           <button onClick={() => {
                             const next = [...ranges]; next.splice(idx, 1);
                             setRulesByDay({ ...rulesByDay, [i]: next });
-                          }} className="text-outline hover:text-error"><Icon name="delete" /></button>
+                          }} className="text-outline hover:text-error shrink-0" aria-label="Remove range"><Icon name="delete" /></button>
                         </div>
                       ))}
                       <button onClick={() => setRulesByDay({ ...rulesByDay, [i]: [...ranges, { start: "09:00", end: "17:00" }] })}
@@ -193,7 +205,7 @@ export default function AvailabilityPage() {
                       </button>
                     </div>
                   ) : (
-                    <div className="flex-1 pt-2 text-sm text-outline">Unavailable</div>
+                    <div className="flex-1 pt-2 text-sm text-outline hidden md:block">Unavailable</div>
                   )}
                 </div>
               );
@@ -202,12 +214,12 @@ export default function AvailabilityPage() {
 
           {/* Overrides */}
           <div className="mt-10 pt-6 border-t border-outline-variant/30">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
               <div>
                 <h3 className="text-lg font-bold">Date-specific hours</h3>
                 <p className="text-sm text-on-surface-variant">Override weekly hours on specific dates (holidays, half-days, etc.).</p>
               </div>
-              <Button variant="ghost" onClick={() => {
+              <Button variant="ghost" className="self-start sm:self-auto" onClick={() => {
                 const today = formatLocalDate(new Date());
                 setOverrides([...overrides, { date: today, blocks: [] }]);
               }}>
@@ -219,10 +231,17 @@ export default function AvailabilityPage() {
             ) : (
               <div className="space-y-3">
                 {overrides.map((o, oi) => (
-                  <div key={oi} className="flex items-start gap-4 p-3 rounded-lg bg-surface-container-low">
-                    <input type="date" value={o.date}
-                      onChange={(e) => { const next = [...overrides]; next[oi] = { ...next[oi], date: e.target.value }; setOverrides(next); }}
-                      className="h-10 px-3 text-sm rounded bg-surface-container-lowest ghost-border focus-ring" />
+                  <div key={oi} className="flex flex-col md:flex-row md:items-start gap-3 md:gap-4 p-3 rounded-lg bg-surface-container-low">
+                    <div className="flex items-center gap-2">
+                      <input type="date" value={o.date}
+                        onChange={(e) => { const next = [...overrides]; next[oi] = { ...next[oi], date: e.target.value }; setOverrides(next); }}
+                        className="h-10 px-3 text-sm rounded bg-surface-container-lowest ghost-border focus-ring flex-1 md:flex-none min-w-0" />
+                      <button
+                        onClick={() => { const next = [...overrides]; next.splice(oi, 1); setOverrides(next); }}
+                        className="md:hidden text-outline hover:text-error shrink-0"
+                        aria-label="Remove override"
+                      ><Icon name="close" /></button>
+                    </div>
                     <div className="flex-1 space-y-2">
                       {o.blocks.length === 0 && (
                         <span className="text-xs font-semibold text-error">Unavailable all day</span>
@@ -232,13 +251,13 @@ export default function AvailabilityPage() {
                           <TimeInput value={b.start} onChange={(v) => {
                             const next = [...overrides]; const bs = [...next[oi].blocks]; bs[bi] = { ...bs[bi], start: v }; next[oi] = { ...next[oi], blocks: bs }; setOverrides(next);
                           }} />
-                          <span className="text-outline">–</span>
+                          <span className="text-outline shrink-0">–</span>
                           <TimeInput value={b.end} onChange={(v) => {
                             const next = [...overrides]; const bs = [...next[oi].blocks]; bs[bi] = { ...bs[bi], end: v }; next[oi] = { ...next[oi], blocks: bs }; setOverrides(next);
                           }} />
                           <button onClick={() => {
                             const next = [...overrides]; const bs = [...next[oi].blocks]; bs.splice(bi, 1); next[oi] = { ...next[oi], blocks: bs }; setOverrides(next);
-                          }} className="text-outline hover:text-error"><Icon name="delete" /></button>
+                          }} className="text-outline hover:text-error shrink-0" aria-label="Remove time range"><Icon name="delete" /></button>
                         </div>
                       ))}
                       <button onClick={() => {
@@ -248,18 +267,18 @@ export default function AvailabilityPage() {
                       </button>
                     </div>
                     <button onClick={() => { const next = [...overrides]; next.splice(oi, 1); setOverrides(next); }}
-                      className="text-outline hover:text-error"><Icon name="close" /></button>
+                      className="hidden md:block text-outline hover:text-error shrink-0" aria-label="Remove override"><Icon name="close" /></button>
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          <div className="mt-8 pt-6 flex justify-between items-center border-t border-outline-variant/30">
-            <Button variant="ghost" className="text-error" onClick={() => setConfirmDelete(true)}>
+          <div className="mt-8 pt-6 flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center gap-3 border-t border-outline-variant/30">
+            <Button variant="ghost" className="text-error self-start" onClick={() => setConfirmDelete(true)}>
               <Icon name="delete" /> Delete schedule
             </Button>
-            <Button onClick={() => save.mutate()} loading={save.isPending}>Save</Button>
+            <Button onClick={() => save.mutate()} loading={save.isPending} className="w-full sm:w-auto">Save</Button>
           </div>
         </div>
       )}
@@ -284,7 +303,11 @@ export default function AvailabilityPage() {
 
 function TimeInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
-    <input type="time" value={value} onChange={(e) => onChange(e.target.value)}
-      className="h-10 px-3 text-sm rounded bg-surface-container-lowest ghost-border focus-ring" />
+    <input
+      type="time"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="h-10 px-2 md:px-3 text-sm rounded bg-surface-container-lowest ghost-border focus-ring flex-1 md:flex-none min-w-0 w-full md:w-auto"
+    />
   );
 }
