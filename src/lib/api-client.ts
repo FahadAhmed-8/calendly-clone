@@ -32,6 +32,11 @@ export const api = {
   cancelBookingAdmin: (id: string, reason?: string) =>
     fetch(`/api/admin/bookings/${id}/cancel`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason }) }).then((r) => json(r)),
 
+  // Account
+  getAccount: () => fetch("/api/admin/account").then((r) => json<any>(r)),
+  updateAccount: (body: any) =>
+    fetch("/api/admin/account", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => json<any>(r)),
+
   // Schedules
   listSchedules: () => fetch("/api/admin/schedules").then((r) => json<any[]>(r)),
   createSchedule: (body: { name: string; timezone: string }) =>

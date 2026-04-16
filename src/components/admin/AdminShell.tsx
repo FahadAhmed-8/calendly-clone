@@ -98,9 +98,22 @@ export function AdminShell({ children, title }: { children: React.ReactNode; tit
           </nav>
         </div>
         <div className="mt-auto p-6 space-y-1">
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-lowest/60 rounded-lg transition-colors">
-            <Icon name="account_circle" /><span className="text-sm font-medium">Account</span>
-          </button>
+          {(() => {
+            const active = pathname === "/account" || pathname.startsWith("/account/");
+            return (
+              <Link
+                href="/account"
+                className={cn(
+                  "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors font-semibold",
+                  active
+                    ? "text-primary bg-surface-container-lowest"
+                    : "text-on-surface-variant hover:bg-surface-container-lowest/60",
+                )}
+              >
+                <Icon name="account_circle" /><span className="text-sm">Account</span>
+              </Link>
+            );
+          })()}
         </div>
       </aside>
 
