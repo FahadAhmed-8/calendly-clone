@@ -1,4 +1,6 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+/* Free fallbacks for Proxima Nova (which is a paid font and not on Google Fonts).
+   Mulish is visually the closest free alternative; Inter is a strong second. */
+@import url("https://fonts.googleapis.com/css2?family=Mulish:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap");
 
 @tailwind base;
@@ -12,7 +14,11 @@
 html, body {
   background-color: #f8f9ff;
   color: #001c37;
-  font-family: "Inter", system-ui, sans-serif;
+  /* Calendly uses "Proxima Nova" (licensed via Adobe Fonts). If the visitor
+     has it installed locally we use it, otherwise we fall through to the
+     closest free alternatives. */
+  font-family: "proxima-nova", "Proxima Nova", "Mulish", "Inter", ui-sans-serif,
+    system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
